@@ -1,4 +1,5 @@
 import math
+from charm.toolbox.pairinggroup import ZR
 
 
 def str2z(string):
@@ -38,4 +39,10 @@ def msp2M(msp):
             d[n][i+1] = v[i]
         for j in range(local_len, theta):
             d[n][j+1] = 0
+    return d
+
+def randomarray(group, size):
+    d = {}
+    for i in range(1, size+1):
+        d[i] = group.random(ZR)
     return d

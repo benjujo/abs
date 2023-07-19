@@ -3,7 +3,7 @@ from charm.toolbox.PKSig import PKSig
 
 
 debug = True
-class BBSig():
+class BLSSig():
     """
     >>> group = PairingGroup('BN254')
     >>> n = 3    # how manu users are in the group
@@ -15,11 +15,15 @@ class BBSig():
     >>> shortSig.verify(global_public_key, msg, signature)
     True
     """
-    def __init__(self, g1=None, g2=None):
+    def __init__(self, g1=None, g2=None, h1=None):
+        #self.group = group
         self.group = PairingGroup('BN254')
+        #global group
+        #group = groupObj
         self.g1 = g1 if g1 != None else self.group.random(G1)
         self.g2 = g2 if g2 != None else self.group.random(G2)
-        #self.H = h # h = Hash(pairingElement=self.group)
+        self.h1 = h1 if h1 != None else self.group.random(G1)
+        self.H = h # h = Hash(pairingElement=self.group)
 
         
     def keygen(self):
@@ -30,13 +34,13 @@ class BBSig():
 
         return (sk, vk)
     
-    def sign(self, sk, m):
+    def sign(self, sk, m, fsk):
         r = self.group.random(ZR)
         exp = sk['x'] + r*sk['y'] + m
         while exp == 0:
             r = self.group.random(ZR)
             exp = sk['x'] + r*sk['y'] + m
-        sigma = self.g1**(1/exp)
+        sigma = (self.g1*fsk)**(1/exp)
 
         return {'sigma': sigma, 'r': r}
     
