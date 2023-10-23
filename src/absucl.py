@@ -449,7 +449,7 @@ class ABSUCL():
             '''
             if j == 1:
                 E[j] = Delta[j] * reduce(lambda x,y: x*y, [self.group.pair_prod(T[i],
-                                                                                (X[i]*K[i]*U)**M[i][j])/self.group.pair_prod(self.g1, self.g2) * self.group.pair_prod(Z, self.g2) for i in range(1, alpha)])
+                                                                                (X[i]*K[i]*U)**M[i][j])/(self.group.pair_prod(self.g1, self.g2) * self.group.pair_prod(Z, self.g2)) for i in range(1, alpha)])
             else:
                 E[j] = Delta[j] * reduce(lambda x,y: x*y, [self.group.pair_prod(T[i],
                                                                                 (X[i]*K[i]*U)**M[i][j]) for i in range(1, alpha)])

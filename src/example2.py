@@ -33,6 +33,6 @@ v={1:1,2:1,3:0}
 
 signature = absucl.Sign(m, policy_string, uid, usk, sk_id_a, v, recip)
 
-Bc = absucl.Verify(signature, policy_string, "not wena", recip)
+Bc = absucl.Verify(signature, policy_string, "wena wena", recip)
 
 
