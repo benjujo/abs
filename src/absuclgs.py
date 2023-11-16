@@ -5,10 +5,6 @@ import time
 from typing import List
 
 
-def extended_pair(g1_1, g1_2, g2_1, g2_2):
-    return np.array([[pair(g1_1, g2_1), pair(g1_1, g2_2)],
-                     [pair(g1_2, g2_1), pair(g1_2, g2_2)]])
-
 
 def commit(group, element, witness: bool, crs: dict):
     r, s = [group.random(ZR) if witness else group.init(ZR) for _ in range(2)]
@@ -25,69 +21,29 @@ def commit(group, element, witness: bool, crs: dict):
         return {'r':r, 's':s}, np.array([[v20**r * v21**s, element * w20**r * w21**s]])
 
 
-class Element():
-    def __init__(self, group_element, is_witness=False):
-        self.group_element
-        self.is_witness = is_witness
-
-    def __add__(self, other):
-        if self.type != other.type:
-            raise Exception
-        if self.type = 0:
-            return Element(self.group_element + other.group_element)
-        if self.type in [1, 2, 3]:
-            return Element(self.group_element * other.group_element)
-
-    def __mul__(self, other):
-        if self.type != 0:
-            raise Exception
-        if other.type == 0:
-            return Element(self.group_element * other.group_element)
-        return Element(other.group_element ** self.group_element)
-
-    def __rmul__(self, other: Element):
-        print('Why?')
-        if self.type not in [1,2,3]:
-            raise Exception
-        if other.type != 0:
-            raise Exception
-        return Element(self.group_element ** other.group_element)
-
-    def iota(self, group_i=None, eq_type=None):
-        global W1, W2
-
-        if self.type == 0:
-            if not group_id:
-                raise Exception
-            return self * W1 if group_id == 1 else self.W2
-
-        if self.type in [1, 2]:
-            return [group.init(self.type), self]
-
-        if self.type == 3:
-            if not eq_type:
-                raise Exception
-            if eq_type == 0: # QE
-                
 
 
+class Commitment:
+    def __init__(self, element: Element):
+        
 
+        
+def extended_pair(x, y):
+    '''
+    x.shape == (2,1)
+    y.shape == (1,2)
+    '''
+    assert x.shape == (2,1)
+    assert y.shape == (1,2)
 
-
-
-    @property
-    def type(self):
-        '''
-        0 = Zp
-        1 = G1
-        2 = G2
-        3 = GT
-        '''
-        return self.group_element.type
+    return np.array([[element_pair(x[0][0], y[0][0]), element_pair(x[0][0], y[0][1])],
+                     [element_pair(x[1][0], y[0][0]), element_pair(x[1][0], y[0][1])]])
 
 
 class Witness():
     def __init__(self):
+        pass
+
 
 
 class InvalidExpression(Exception):
@@ -96,7 +52,7 @@ class InvalidExpression(Exception):
 class Expression:
     def __init__(self, element: Element):
         if element.is_witness:
-
+            pass
         witness = 1
         variable = 1
         self._witnesses = [witness]
