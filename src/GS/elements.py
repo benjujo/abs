@@ -65,6 +65,10 @@ class Element():
         raise NotImplemented
     
     def commit(self):
+        '''returns a tuple with the random(s) elements
+        and the element computed
+        eg: ((r1, r2) e)
+        '''
         raise NotImplemented
 
     def __repr__(self):
@@ -82,9 +86,9 @@ class Element():
 
 
 class ZpElement(Element):
-    def __init__(self, group_element, a_i=None):
+    def __init__(self, group_element):
         assert group_element.type == ZR
-        self.a_i = a_i
+        #self.a_i = a_i
         super().__init__(group_element)
 
     def __add__(self, other):
@@ -100,25 +104,23 @@ class ZpElement(Element):
         if other.type == G2:
             return G2Element(other.group_element ** self.group_element)
 
-    def iota(self, target):
+    def iota(self, target, a_i):
         global W1, W2
         if target:
             # iota_t
             return extended_pair(W1, W2) ** self
-        if self.a_i == 1:
+        if a_i == 1:
             # iota_1
             return W1 ** self
-        if self.a_i == 2:
+        if a_i == 2:
             # iota_2
             return W2 ** self
 
-    def to_commit(self):
-        pass
+    def commit(self, a_i):
 
-    def commit(self):
-        global U, U1, U2
-        r = np.array([[group.random(ZR) for _ in range(2)]])
-        return self.iota() + r*U
+        global U1, U2, V1, V2
+        r = np.array([[Element(group.random(ZR))]])
+        return (r, self.iota(a_i) + r*U1)
 
 
 class G1Element(Element):
