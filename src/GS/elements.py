@@ -2,6 +2,7 @@ from charm.toolbox.pairinggroup import PairingGroup,ZR,G1,G2,GT,pair,pairing
 import numpy as np
 from functools import reduce
 
+group = PairingGroup('BN254')
 
 def element_zero(group_type):
     '''
@@ -15,6 +16,9 @@ def element_zero(group_type):
         return GTElement(group.init(group_type))
     '''
     return ELEMENT_DICT[group_type](group.init(group_type))
+
+def element_random(group_type):
+    return ELEMENT_DICT[group_type](group.random(group_type))
 
 def element_pair(a, b):
     return GTElement(pair(a.group_element, b.group_element))
@@ -50,26 +54,16 @@ class Element():
         self.group_element = group_element
 
     def __add__(self, other):
-        raise NotImplemented
+        return NotImplemented
 
     def __mul__(self, other):
-        raise NotImplemented
+        return NotImplemented
 
     def __pow__(self, other):
-        raise NotImplemented
+        return NotImplemented
 
     def __eq__(self, other):
         return self.group_element == other.group_element
-
-    def iota(self, target):
-        raise NotImplemented
-    
-    def commit(self):
-        '''returns a tuple with the random(s) elements
-        and the element computed
-        eg: ((r1, r2) e)
-        '''
-        raise NotImplemented
 
     def __repr__(self):
         return f"{self.group_element}"
@@ -96,31 +90,19 @@ class ZpElement(Element):
             raise Exception
         return ZpElement(self.group_element + other.group_element)
 
+    def __sub__(self, other):
+        if self.type != other.type:
+            raise Exception
+        return ZpElement(self.group_element - other.group_element)
+
     def __mul__(self, other):
-        if other.type == ZR:
+        if isinstance(other, ZpElement):
             return ZpElement(self.group_element * other.group_element)
-        if other.type == G1:
+        if isinstance(other, G1Element):
             return G1Element(other.group_element ** self.group_element)
-        if other.type == G2:
+        if isinstance(other, G2Element):
             return G2Element(other.group_element ** self.group_element)
-
-    def iota(self, target, a_i):
-        global W1, W2
-        if target:
-            # iota_t
-            return extended_pair(W1, W2) ** self
-        if a_i == 1:
-            # iota_1
-            return W1 ** self
-        if a_i == 2:
-            # iota_2
-            return W2 ** self
-
-    def commit(self, a_i):
-
-        global U1, U2, V1, V2
-        r = np.array([[Element(group.random(ZR))]])
-        return (r, self.iota(a_i) + r*U1)
+        return NotImplemented
 
 
 class G1Element(Element):
@@ -131,24 +113,17 @@ class G1Element(Element):
     def __add__(self, other):
         if self.type != other.type:
             raise Exception
-        return Element(self.group_element * other.group_element)
+        return G1Element(self.group_element * other.group_element)
+
+    def __sub__(self, other):
+        if self.type != other.type:
+            raise Exception
+        return G1Element(self.group_element / other.group_element)
 
     def __mul__(self, other):
-        raise Exception
-
-    def iota(self, target):
-        global W1, W2
-        if target:
-            # iota_t
-            return np.array([[group_zero(GT), group_zero(GT)],
-                             [element_pair(self, W2[0][0]), element_pair(self, W2[0][1])]])
-        # iota_1
-        return np.array([[group.init(self.type), self]]).T
-
-    def commit(self):
-        global U, U1, U2
-        r = np.array([[group.random(ZR) for _ in range(2)]])
-        return self.iota() + r*U
+        if other.type != G2:
+            raise Exception
+        return GTElement(pair(self.group_element, other.group_element))
 
 
 class G2Element(Element):
@@ -159,25 +134,15 @@ class G2Element(Element):
     def __add__(self, other):
         if self.type != other.type:
             raise Exception
-        return Element(self.group_element * other.group_element)
+        return G2Element(self.group_element * other.group_element)
+
+    def __sub__(self, other):
+        if self.type != other.type:
+            raise Exception
+        return G2Element(self.group_element / other.group_element)
 
     def __mul__(self, other):
         raise Exception
-
-    def iota(self, target):
-        global W1, W2
-        if target:
-            # iota_t
-            return np.array([[group_zero(GT), element_pair(W1[0][0], self)],
-                             [group.zero(GT), element_pair(W1[1][0], self)]])
-        # iota_2
-        return np.array([[group.init(self.type), self]])
-        
-        
-    def commit(self):
-        global U, U1, U2
-        r = np.array([[group.random(ZR) for _ in range(2)]])
-        return self.iota() + r*U
 
 
 class GTElement(Element):
@@ -194,21 +159,9 @@ class GTElement(Element):
     def __pow__(self, other):
         if other.type != ZR:
             raise Exception
-        return Element(self.group_element ** other.group_element)
+        return GTElement(self.group_element ** other.group_element)
 
-    def iota(self, target):
-        global W1, W2
-        if not target:
-            raise Exception
-        
-        # Pairing Product Equation
-        return np.array([[element_zero(GT), element_zero(GT)],
-                         [element_zero(GT), self]])
 
-    def commit(self):
-        global U, U1, U2
-        r = np.array([[group.random(ZR) for _ in range(2)]])
-        return self.iota() + r*U
 
 ELEMENT_DICT = {
     0: ZpElement,

@@ -1,5 +1,5 @@
 from elements import *
-from typing import List
+from typing import List, Dict
 
 
 EQUATION_TYPES = {
@@ -10,10 +10,37 @@ EQUATION_TYPES = {
 }
 
 
-class MapA():
-    def __init__(self, a_1, a_2, gamma):
-        self.a_1 = a_1
-        self.a_2 = a_2
+class A():
+    def __init__(self, element):
+        self.element = element
+    
+    @property
+    def type(self):
+        return self.element.type
+
+
+class A1(A):
+    def __init__(self):
+        super().__init__()
+        pass
+
+
+class A2(A):
+    def __init__(self):
+        super().__init__()
+        pass
+
+
+class AT(A):
+    def __init__(self):
+        super().__init__()
+        pass
+
+
+class AMap():
+    def __init__(self, a1: A1, a2: A2, gamma):
+        self.a1 = a1
+        self.a2 = a2
         self.gamma = gamma
     
     def _validate(self):
@@ -21,7 +48,7 @@ class MapA():
         pass
 
     def _eval(self):
-        return element_pair(self.a_1.element, self.a_2.element)
+        return element_pair(self.a1.element, self.a2.element)
 
     def extract_variables(self):
         vars = {}
@@ -32,59 +59,131 @@ class MapA():
         return vars
 
     
+class A():
+    def __init__(self, **kwargs):
+        name = kwargs.get('name')
+        element = kwargs.get('element')
 
-class MapB(b_1, b_2):
+        if name:
+            self.witness = True
+            self._name = name
+        elif element:
+            self.witness = False
+            self._element = element
+        else:
+            raise Exception
+        
+        @property
+        def element(self):
+            if self.witness:
+                raise Exception
+            return self._element
+        
+        @property
+        def name(self):
+            if not self.witness:
+                raise Exception
+            return self._name
+    
+    @property
+    def type(self):
+        return self.element.type
+
+
+class A1(A):
+    pass
+
+
+class A2(A):
+    pass
+
+
+class AT(A):
+    def __init__(self, **kwargs):
+        if kwargs.get('name'):
+            raise Exception
+        super().__init__(**kwargs)
+
+
+class AMap():
+    def __init__(self, a1: A1, a2: A2, gamma):
+        self.a1 = a1
+        self.a2 = a2
+        self.gamma = gamma
+
+    
+class B():
+    def __init__(self, e1, e2):
+        self.e1 = e1
+        self.e2 = e2
+    
+
+
+class B1(B):
+    def __add__(self, other):
+        return B1(self.e1 + other.e1, self.e2 + other.e2)
+    
+    def __rmul__(self, other):
+        if isinstance(other, ZpElement):
+            return B1(other * self.e1, other * self.e2)
+        return NotImplemented
+
+    def __sub__(self, other):
+        if not isinstance(other, B1):
+            return NotImplemented
+        return B1(self.e1 - other.e1, self.e2 - other.e2)
+
+
+class B2(B):
+    def __add__(self, other):
+        return B2(self.e1 + other.e1, self.e2 + other.e2)
+    
+    def __rmul__(self, other):
+        if isinstance(other, ZpElement):
+            return B2(other * self.e1, other * self.e2)
+        return NotImplemented
+
+    def __sub__(self, other):
+        if not isinstance(other, B2):
+            return NotImplemented
+        return B2(self.e1 - other.e1, self.e2 - other.e2)
+
+
+class BT(B):
+    pass
+
+
+class BMap():
+    def __init__(self, b1: B1, b2: B2):
+        self.b1 = b1
+        self.b2 = b2
 
     def eval(self):
-        return extended_pair(b_1, b_2)
+        return extended_pair(b1, b2)
 
 
-class Commitment():
-    def __init__(self, variable: Variable):
-        self.variable = variable
-
-    @property
-    def a_i(self):
-        return self.variable.a_i
 
     
 
-class Variable():
-    def __init__(self, name:str, element:Element, a_i=None):
-        self.name = name
-        self.element = element
-        self.a_i = a_i
-        self.commitment = None
-
-    def commit(self):
-        return self.element.commit(self.a_i)
-
-class Constant():
-    def __init__(self, name:str, element:Element, a_i=None):
-        self.name = name
-        self.element = element
-        self.a_i = a_i
-
 class Equation():
-    def __init__(self, map_as: List[MapA], t, eq_type):
+    def __init__(self, name:str, a_maps: List[AMap], target:AT, eq_type):
+        self.name = name
+
         self.type = eq_type
+        self.a_maps = a_maps
+        self.target = target
 
-        self.map_as = map_as
+    def check(self, variables: Dict):
+        pass
 
-    def extract_variables(self):
-        eq_vars = {}
-        for map_a in self.map_as:
-            eq_vars.update(map_a.extract_variables())
-        return eq_vars
+    def prove(self, comms: Dict):
+        pass
 
-        
-
-    def _is_correct(self):
-        return vector_element_pair(self.a, self.y) + vector_element_pair(self.x, self.b) + vector_element_pair(self.x, self.Gamma @ self.y) == self.t
-
+    def verify(self, comms: Dict, theta, pi):
+        pass
 
 
 
 class PPEquation(Equation):
-    def __init__(self):
-        super().__init__(EQUATION_TYPES['PPE'])
+    def __init__(self, name:str, a_maps: List[AMap], target:AT):
+        super().__init__(name, a_maps, target, EQUATION_TYPES['PPE'])
