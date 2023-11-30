@@ -3,7 +3,7 @@ from elements import Element, element_random, element_zero, ZR, G1, G2
 
 from typing import List, Dict
 
-class Proof():
+class GS():
     def __init__(self, binding=True):
         # TODO: Create CRS Setup
         alpha1 = element_random(ZR)
