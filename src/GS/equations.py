@@ -10,33 +10,6 @@ EQUATION_TYPES = {
 }
 
 
-class A():
-    def __init__(self, element):
-        self.element = element
-    
-    @property
-    def type(self):
-        return self.element.type
-
-
-class A1(A):
-    def __init__(self):
-        super().__init__()
-        pass
-
-
-class A2(A):
-    def __init__(self):
-        super().__init__()
-        pass
-
-
-class AT(A):
-    def __init__(self):
-        super().__init__()
-        pass
-
-
 class AMap():
     def __init__(self, a1: A1, a2: A2, gamma):
         self.a1 = a1
