@@ -2,10 +2,22 @@ from equations import Equation, B1, B2
 from elements import Element, element_random, element_zero, ZR, G1, G2
 
 from typing import List, Dict
+import json
+
+def json_serializer(obj):
+    if hasattr(obj, '__json__'):
+        return obj.__json__()
+    else:
+        # For non-serializable objects, use the default JSON serialization
+        return json.JSONEncoder().default(obj)
 
 class GS():
-    def __init__(self, binding=True):
-        # TODO: Create CRS Setup
+    def __init__(self, CRS, trapdoor=None):
+        self.CRS = CRS
+        self.trapdoor = trapdoor
+
+    @classmethod
+    def setup(cls, binding=True):
         alpha1 = element_random(ZR)
         t1 = element_random(ZR)
 
@@ -28,10 +40,8 @@ class GS():
 
 
         CRS = {'u1': u1, 'u2': u2, 'v1': v1, 'v2': v2}
-        self.CRS = CRS
-        self.trapdoor = {'alpha1': alpha1, 'alpha2': alpha2, 't1': t1, 't2': t2}
-
-        
+        trapdoor = {'alpha1': alpha1, 'alpha2': alpha2, 't1': t1, 't2': t2}
+        return cls(CRS, trapdoor)
 
     def prove(self, equations: List[Equation], variables: Dict):
         # TODO: Check equations
@@ -61,3 +71,17 @@ class GS():
             if not eq.verify(comms, theta, pi):
                 return False
         return True
+
+    def serialize(self):
+        return json.dumps(self.CRS, default=json_serializer)
+
+    @classmethod
+    def deserialize(cls, gs_json):
+        gs_dict = json.loads(gs_json)
+        u1 = B1.from_json(gs_dict['u1'])
+        u2 = B1.from_json(gs_dict['u2'])
+        v1 = B2.from_json(gs_dict['v1'])
+        v2 = B2.from_json(gs_dict['v2'])
+
+        CRS = {'u1': u1, 'u2': u2, 'v1': v1, 'v2': v2}
+        return cls(CRS)

@@ -67,6 +67,15 @@ class Element():
 
     def __repr__(self):
         return f"{self.group_element}"
+
+    def __json__(self):
+        return group.serialize(self.group_element).decode('utf-8')
+
+    @classmethod
+    def from_json(cls, json_str):
+        bytes_element = json_str.encode('utf-8')
+        group_element = group.deserialize(bytes_element)
+        return ELEMENT_DICT[group_element.type](group_element)
     
     @property
     def type(self):

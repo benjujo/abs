@@ -89,8 +89,14 @@ class B():
     def __init__(self, e1, e2):
         self.e1 = e1
         self.e2 = e2
-    
 
+    def __json__(self):
+        return {'e1': self.e1, 'e2': self.e2}
+    
+    @classmethod
+    def from_json(cls, json):
+        return cls(Element.from_json(json['e1']), Element.from_json(json['e2']))
+    
 
 class B1(B):
     def __add__(self, other):
