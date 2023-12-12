@@ -13,7 +13,6 @@ RUN apt-get install -y openssl
 
 RUN apt install -y libssl-dev flex bison
 
-COPY src/ src
 COPY charm/ charm
 
 RUN cd charm && python3.7 -m pip install -r requirements.txt
@@ -24,5 +23,8 @@ RUN cd charm && make
 RUN cd charm && make install && ldconfig
 
 #RUN cd charm && make test
+RUN python -m pip install numpy
 
-ENTRYPOINT ["tail", "-f", "/dev/null"]
+COPY src/ src
+
+#ENTRYPOINT ["tail", "-f", "/dev/null"]
