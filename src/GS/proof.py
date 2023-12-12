@@ -1,4 +1,4 @@
-from equations import Equation, B1, B2
+from equations import Equation, B1, B2, ExplicitVariable
 from elements import Element, element_random, element_zero, ZR, G1, G2
 
 from typing import List, Dict
@@ -43,13 +43,13 @@ class GS():
         trapdoor = {'alpha1': alpha1, 'alpha2': alpha2, 't1': t1, 't2': t2}
         return cls(CRS, trapdoor)
 
-    def prove(self, equations: List[Equation], variables: Dict):
+    def prove(self, equations: List[Equation], variables: List[ExplicitVariable]):
         # TODO: Check equations
         # for eq in equations:
         #     if not eq.check(variables):
         #         raise EquationNotValid
         
-        comms = {k: v.commit for k,v in variables.items()}
+        comms = [v.commit() for v in variables]
 
         proofs_dict = {}
         thetas = {}
