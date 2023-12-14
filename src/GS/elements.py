@@ -1,48 +1,7 @@
 from charm.toolbox.pairinggroup import PairingGroup,ZR,G1,G2,GT,pair,pairing
-import numpy as np
-from functools import reduce
+
 
 group = PairingGroup('BN254')
-
-def element_zero(group_type):
-    '''
-    if group_type == ZR:
-        return ZpElement(group.init(group_type))
-    if group_type == G1:
-        return G1Element(group.init(group_type))
-    if group_type == G2:
-        return G2Element(group.init(group_type))
-    if group_type == GT:
-        return GTElement(group.init(group_type))
-    '''
-    return ELEMENT_DICT[group_type](group.init(group_type))
-
-def element_random(group_type):
-    return ELEMENT_DICT[group_type](group.random(group_type))
-
-def element_pair(a, b):
-    return GTElement(pair(a.group_element, b.group_element))
-
-def extended_pair(x: np.ndarray, y:np.ndarray):
-    '''
-    x.shape == (2,1)
-    y.shape == (1,2)
-    '''
-    assert x.shape == (2,1)
-    assert y.shape == (1,2)
-
-    return np.array([[element_pair(x[0][0], y[0][0]), element_pair(x[0][0], y[0][1])],
-                     [element_pair(x[1][0], y[0][0]), element_pair(x[1][0], y[0][1])]])
-
-def vector_element_pair(x: np.ndarray, y:np.ndarray):
-    assert x.T.shape == y.shape
-
-    return reduce(lambda e1,e2: e1+e2, element_pair(x[i][0], y[0][i]))
-
-def vector_extended_pair(x: np.ndarray, y:np.ndarray):
-    assert x.T.shape == y.shape
-
-    return reduce(lambda e1,e2: e1+e2, extended_pair(x[i][0], y[0][i]))
      
 
 class Element():
@@ -62,6 +21,9 @@ class Element():
     def __pow__(self, other):
         return NotImplemented
 
+    def pair(self, other):
+        return NotImplemented
+
     def __eq__(self, other):
         return self.group_element == other.group_element
 
@@ -71,11 +33,26 @@ class Element():
     def __json__(self):
         return group.serialize(self.group_element).decode('utf-8')
 
+    @staticmethod
+    def zero(group_type):
+        return ELEMENT_DICT[group_type](group.init(group_type))
+
+    @staticmethod
+    def random(group_type):
+        return ELEMENT_DICT[group_type](group.random(group_type))
+
     @classmethod
     def from_json(cls, json_str):
         bytes_element = json_str.encode('utf-8')
         group_element = group.deserialize(bytes_element)
         return ELEMENT_DICT[group_element.type](group_element)
+        
+    @staticmethod
+    def hash_from_string(string: str, group_type: int):
+        '''
+        Returns hash representation of string
+        '''
+        return ELEMENT_DICT[group_type](group.hash(string, group_type))
     
     @property
     def type(self):
@@ -91,17 +68,16 @@ class Element():
 class ZpElement(Element):
     def __init__(self, group_element):
         assert group_element.type == ZR
-        #self.a_i = a_i
         super().__init__(group_element)
 
     def __add__(self, other):
-        if self.type != other.type:
-            raise Exception
+        if isinstance(other, ZpElement):
+            raise Exception('Not a Zp element')
         return ZpElement(self.group_element + other.group_element)
 
     def __sub__(self, other):
-        if self.type != other.type:
-            raise Exception
+        if isinstance(other, ZpElement):
+            raise Exception('Not a Zp element')
         return ZpElement(self.group_element - other.group_element)
 
     def __mul__(self, other):
@@ -112,6 +88,18 @@ class ZpElement(Element):
         if isinstance(other, G2Element):
             return G2Element(other.group_element ** self.group_element)
         return NotImplemented
+    
+    @staticmethod
+    def zero():
+        return Element.zero(ZR)
+
+    @staticmethod
+    def random():
+        return Element.random(ZR)
+
+    @staticmethod
+    def hash_from_string(string: str):
+        return Element.hash_from_string(string, ZR)
 
 
 class G1Element(Element):
@@ -120,19 +108,31 @@ class G1Element(Element):
         super().__init__(group_element)
 
     def __add__(self, other):
-        if self.type != other.type:
-            raise Exception
+        if not isinstance(other, G1Element):
+            raise Exception('Not a G1 element')
         return G1Element(self.group_element * other.group_element)
 
     def __sub__(self, other):
-        if self.type != other.type:
-            raise Exception
+        if not isinstance(other, G1Element):
+            raise Exception('Not a G1 element')
         return G1Element(self.group_element / other.group_element)
 
-    def __mul__(self, other):
-        if other.type != G2:
-            raise Exception
+    def pair(self, other):
+        if not isinstance(other, G2Element):
+            raise Exception('Not a G2 element')
         return GTElement(pair(self.group_element, other.group_element))
+    
+    @staticmethod
+    def zero():
+        return Element.zero(G1)
+
+    @staticmethod
+    def random():
+        return Element.random(G1)
+
+    @classmethod
+    def hash_from_string(cls, string: str):
+        return super().hash_from_string(string, G1)
 
 
 class G2Element(Element):
@@ -141,17 +141,26 @@ class G2Element(Element):
         super().__init__(group_element)
 
     def __add__(self, other):
-        if self.type != other.type:
-            raise Exception
+        if not isinstance(other, G2Element):
+            raise Exception('Not a G2 element')
         return G2Element(self.group_element * other.group_element)
 
     def __sub__(self, other):
-        if self.type != other.type:
-            raise Exception
+        if not isinstance(other, G2Element):
+            raise Exception('Not a G2 element')
         return G2Element(self.group_element / other.group_element)
+    
+    @staticmethod
+    def zero():
+        return Element.zero(G2)
 
-    def __mul__(self, other):
-        raise Exception
+    @staticmethod
+    def random():
+        return Element.random(G2)
+
+    @classmethod
+    def hash_from_string(cls, string: str):
+        return super().hash_from_string(string, G2)
 
 
 class GTElement(Element):
@@ -159,16 +168,23 @@ class GTElement(Element):
         assert group_element.type == GT
         super().__init__(group_element)
 
-    def __add__(self, other):
-        raise Exception
-
     def __mul__(self, other):
-        raise Exception
+        if not isinstance(other, GTElement):
+            raise Exception('Not a GT element')
+        return GTElement(self.group_element * other.group_element)
 
     def __pow__(self, other):
-        if other.type != ZR:
-            raise Exception
+        if not isinstance(other, ZpElement):
+            raise Exception('Not a Zp element')
         return GTElement(self.group_element ** other.group_element)
+    
+    @staticmethod
+    def zero():
+        return Element.zero(GT)
+
+    @staticmethod
+    def random():
+        return Element.random(GT)
 
 
 

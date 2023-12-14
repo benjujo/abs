@@ -23,7 +23,6 @@ RUN cd charm && make
 RUN cd charm && make install && ldconfig
 
 #RUN cd charm && make test
-RUN python -m pip install numpy
 
 COPY src/ src
 

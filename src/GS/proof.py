@@ -1,5 +1,5 @@
 from equations import Equation, B1, B2, ExplicitVariable
-from elements import Element, element_random, element_zero, ZR, G1, G2
+from elements import Element, ZpElement, G1Element, G2Element, GTElement, ZR, G1, G2
 
 from typing import List, Dict
 import json
@@ -18,25 +18,25 @@ class GS():
 
     @classmethod
     def setup(cls, binding=True):
-        alpha1 = element_random(ZR)
-        t1 = element_random(ZR)
+        alpha1 = ZpElement.random()
+        t1 = ZpElement.random()
 
-        p1 = element_random(G1)
+        p1 = G1Element.random()
         q1 = alpha1 * p1
         u1 = B1(p1, q1)
         u2 = t1 * u1
 
-        alpha2 = element_random(ZR)
-        t2 = element_random(ZR)
+        alpha2 = ZpElement.random()
+        t2 = ZpElement.random()
 
-        p2 = element_random(G2)
+        p2 = G2Element.random()
         q2 = alpha2 * p2
         v1 = B2(p2, q2)
         v2 = t2 * v1
 
         if not binding:
-            u2 -= B1(element_zero(G1), p1)
-            v2 -= B2(element_zero(G2), p2)
+            u2 -= B1(G1Element.random(), p1)
+            v2 -= B2(G2Element.random(), p2)
 
 
         CRS = {'u1': u1, 'u2': u2, 'v1': v1, 'v2': v2}
@@ -44,19 +44,24 @@ class GS():
         return cls(CRS, trapdoor)
 
     def prove(self, equations: List[Equation], variables: List[ExplicitVariable]):
-        # TODO: Check equations
-        # for eq in equations:
-        #     if not eq.check(variables):
-        #         raise EquationNotValid
-        
-        comms = [v.commit() for v in variables]
+        vars = {v.name: v for v in variables}
 
-        proofs_dict = {}
+        for eq in equations:
+            if not eq.check(vars):
+                raise EquationNotValid
+        
+        list_comms = [v.commit() for v in variables]
+        comms = {c.name: c for c in list_comms}
+
+        R = {}
+        for c in comms:
+            R[c.name] = c[0]
+
         thetas = {}
         pis = {}
 
         for eq in equations:
-            theta, pi = eq.prove(comms)
+            theta, pi = eq.prove(comms, vars)
 
             thetas[eq.name] = theta
             pis[eq.name] = pi
