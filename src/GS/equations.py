@@ -293,7 +293,7 @@ class Commit():
         self.r = r
 
     def __json__(self):
-        return {'name': self.name, 'b': self.b, 'b_type':}
+        return {'name': self.name, 'b': self.b, 'b_type': type(self.b).__name__}
 
     @classmethod
     def from_json(cls, json):
