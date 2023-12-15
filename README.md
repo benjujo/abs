@@ -1,5 +1,5 @@
 # How to run
-Tested in `x86_64` arch.
+Tested in `x86_64` & `aarch64` arch.
 
 First, pull the submodule to build the docker image:
 
