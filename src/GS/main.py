@@ -17,6 +17,7 @@ class Proof():
 
 class PairExpr():
     def __init__(self):
+        pass
 
 
 class Equation():

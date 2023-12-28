@@ -1,4 +1,4 @@
-from elements import *
+from .elements import *
 from typing import List, Dict, Tuple
 from functools import reduce
 
@@ -38,8 +38,8 @@ class A():
 
     def _iotat(self, CRS, eq_type):
         if eq_type == EQUATION_TYPES['PPE']:
-            return [GTElement.zero(), GTElement.zero(),
-                    GTElement.zero(), self.element]
+            return BT(GTElement.zero(), GTElement.zero(),
+                      GTElement.zero(), self.element)
         if eq_type == EQUATION_TYPES['MS1E']:
             v = CRS['v2'] + B2(G2Element.zero(), CRS['v1'].e1)
             return self.element.iota(CRS).extended_pair(v)
@@ -63,11 +63,12 @@ class Constant(A):
         self.element = element
         super().__init__(False)
 
+    def __json__(self):
+        return {'element': self.element}
 
-class Variable(A):
-    def __init__(self, name: str):
-        self.name = name
-        super().__init__(True)
+    @classmethod
+    def from_json(cls, json):
+        return cls(Element.from_json(json['element']))
 
 
 class AMap():
@@ -75,16 +76,21 @@ class AMap():
         self.a1 = a1
         self.a2 = a2
         self.gamma = gamma
+        self.theta_dim = 0 # When _validate is called, this is set
+        self.pi_dim = 0 # When _validate is called, this is set
     
-    def _validate(self):
+    def _validate(self, eq_type):
         # TODO: Run validations if the instance is correct
         self.a1.position = 1
         self.a2.position = 2
 
-    def theta(self, comms: Dict[str, "Commit"], variables: Dict[str, "ExplicitVariable"]):
+    def theta(self, comms: Dict[str, "Commit"], variables: Dict[str, "Variable"], CRS):
         return NotImplemented
 
-    def pi(self, comms: Dict[str, "Commit"], variables: Dict[str, "ExplicitVariable"]):
+    def pi(self, comms: Dict[str, "Commit"], variables: Dict[str, "Variable"], CRS):
+        return NotImplemented
+
+    def eval_lhs(self, comms: Dict[str, "Commit"], CRS):
         return NotImplemented
 
 class AMapLeft(AMap):
@@ -92,11 +98,11 @@ class AMapLeft(AMap):
     def __init__(self, a1, a2):
         super().__init__(a1, a2, None)
 
-    def theta(self, comms: Dict[str, "Commit"], variables: Dict[str, "ExplicitVariable"], CRS):
+    def theta(self, comms: Dict[str, "Commit"], variables: Dict[str, "Variable"], CRS):
         return [B1.zero()] * self.theta_dim
 
 
-    def pi(self, comms: Dict[str, "Commit"], variables: Dict[str, "ExplicitVariable"], CRS):
+    def pi(self, comms: Dict[str, "Commit"], variables: Dict[str, "Variable"], CRS):
         var = variables[self.a1.name]
         com = comms[self.a1.name]
 
@@ -107,10 +113,13 @@ class AMapLeft(AMap):
             res.append(i * self.a2.iota(CRS))
 
         return res
+
+    def eval_lhs(self, comms: Dict[str, "Commit"], CRS):
+        return comms[self.a1.name].b.extended_pair(self.a2.iota(CRS))
     
-    def eval(self, variables: Dict[str, "ExplicitVariable"]):
+    def eval(self, variables: Dict[str, "Variable"]):
         left = variables[self.a1.name].element
-        right = a2.element
+        right = self.a2.element
         return left.pair(right)
 
 
@@ -119,7 +128,7 @@ class AMapRight(AMap):
     def __init__(self, a1, a2):
         super().__init__(a1, a2, None)
 
-    def theta(self, comms: Dict[str, "Commit"], variables: Dict[str, "ExplicitVariable"], CRS):
+    def theta(self, comms: Dict[str, "Commit"], variables: Dict[str, "Variable"], CRS):
         var = variables[self.a2.name]
         com = comms[self.a2.name]
 
@@ -131,11 +140,14 @@ class AMapRight(AMap):
 
         return res
 
-    def pi(self, comms: Dict[str, "Commit"], variables: Dict[str, "ExplicitVariable"], CRS):
+    def pi(self, comms: Dict[str, "Commit"], variables: Dict[str, "Variable"], CRS):
         return [B2.zero()] * self.pi_dim
     
-    def eval(self, variables: Dict[str, "ExplicitVariable"]):
-        left = a1.element
+    def eval_lhs(self, comms: Dict[str, "Commit"], CRS):
+        return self.a1.iota(CRS).extended_pair(comms[self.a2.name].b)
+    
+    def eval(self, variables: Dict[str, "Variable"]):
+        left = self.a1.element
         right = variables[self.a2.name].element
         return left.pair(right)
 
@@ -145,7 +157,10 @@ class AMapBoth(AMap):
     def __init__(self, a1, a2, gamma):
         super().__init__(a1, a2, gamma)
     
-    def eval(self, variables: Dict[str, "ExplicitVariable"]):
+    def eval_lhs(self, comms: Dict[str, "Commit"], CRS):
+        return self.gamma * comms[self.a1.name].b.extended_pair(comms[self.a2.name].b)
+    
+    def eval(self, variables: Dict[str, "Variable"]):
         left = variables[self.a1.name].element
         right = variables[self.a2.name].element
         return left.pair(right)
@@ -153,9 +168,9 @@ class AMapBoth(AMap):
 
 class AMapNone(AMap):
     # TODO: Check types
-    def eval(self, variables: Dict[str, "ExplicitVariable"]):
-        left = a1.element
-        right = a2.element
+    def eval(self, variables: Dict[str, "Variable"]):
+        left = self.a1.element
+        right = self.a2.element
         return left.pair(right)
 
     
@@ -166,6 +181,9 @@ class B():
 
     def __json__(self):
         return {'e1': self.e1, 'e2': self.e2}
+
+    def extended_pair(self, other):
+        return NotImplemented
     
     @classmethod
     def from_json(cls, json):
@@ -191,8 +209,8 @@ class B1(B):
     def extended_pair(self, other):
         if not isinstance(other, B2):
             raise Exception('Invalid type')
-        return [self.e1.pair(other.e1), self.e2.pair(other.e1),
-                self.e1.pair(other.e2), self.e2.pair(other.e2)]
+        return BT(self.e1.pair(other.e1), self.e2.pair(other.e1),
+                  self.e1.pair(other.e2), self.e2.pair(other.e2))
     
     @classmethod
     def zero(cls):
@@ -220,20 +238,44 @@ class B2(B):
         return cls(G2Element.zero(), G2Element.zero())
 
 
-class BT(B):
-    pass
+class BT:
+    def __init__(self, e1, e2, e3, e4):
+        self.e1 = e1
+        self.e2 = e2
+        self.e3 = e3
+        self.e4 = e4
+    
+    def __add__(self, other):
+        if not isinstance(other, BT):
+            return NotImplemented
+        return BT(self.e1 * other.e1, self.e2 * other.e2,
+                  self.e3 * other.e3, self.e4 * other.e4)
+
+    def __sub__(self, other):
+        if not isinstance(other, BT):
+            return NotImplemented
+        return BT(self.e1 / other.e1, self.e2 / other.e2,
+                  self.e3 / other.e3, self.e4 / other.e4)
+
+    def __eq__(self, other):
+        if not isinstance(other, BT):
+            return False
+        return self.e1 == other.e1 and self.e2 == other.e2 and self.e3 == other.e3 and self.e4 == other.e4
+
+    def __json__(self):
+        return {'e1': self.e1, 'e2': self.e2, 'e3': self.e3, 'e4': self.e4}
+    
+    @classmethod
+    def from_json(cls, json):
+        return cls(Element.from_json(json['e1']), Element.from_json(json['e2']),
+                   Element.from_json(json['e3']), Element.from_json(json['e4']))
+    @classmethod
+    def zero(cls):
+        return cls(GTElement.zero(), GTElement.zero(),
+                   GTElement.zero(), GTElement.zero())
 
 
-class BMap():
-    def __init__(self, b1: B1, b2: B2):
-        self.b1 = b1
-        self.b2 = b2
-
-    def eval(self):
-        return extended_pair(b1, b2)
-
-
-class ExplicitVariable():
+class Variable():
     def __init__(self, name: str, element: Element, position: int = None):
         self.name = name
         self.element = element
@@ -277,13 +319,20 @@ class ExplicitVariable():
     def _randomize2(self, CRS):
         if self.element.type == ZR:
             r = ZpElement.random()
-            return (r,), r * CRS.v1
+            return (r,), r * CRS['v1']
         r1, r2 = [ZpElement.random() for _ in range(2)]
         return (r1, r2), r1 * CRS['v1'] + r2 * CRS['v2']
 
     def commit(self, CRS):
         r, randomization = self._randomize(CRS)
         return Commit(self.name, self.iota(CRS) + randomization, r)
+
+    def __json__(self):
+        return {'name': self.name, 'position': self.position}
+
+    @classmethod
+    def from_json(cls, json):
+        return cls(json['name'], json['position'])
 
 
 class Commit():
@@ -313,12 +362,18 @@ class Equation():
             a_map.theta_dim = self.theta_dim
             a_map.pi_dim = self.pi_dim
 
+    def _validate(self):
+        # TODO: Complete
+        for a_map in self.a_maps:
+            a_map._validate(self.type)
 
-    def check(self, variables: List[ExplicitVariable]) -> bool:
+
+    def check(self, variables: List[Variable]) -> bool:
         # TODO: Check if the equation is valid. Return True or False
         return True
 
-    def prove(self, comms: List[Commit], variables: List[ExplicitVariable], CRS) -> Tuple[Tuple[B1, ...], Tuple[B2, ...]]:
+    def prove(self, comms: Dict[str, "Commit"], variables: Dict[str, "Variable"], CRS) -> Tuple[List[B1], List[B2]]:
+        self._validate()
         theta = [B1.zero()] * self.theta_dim
         pi = [B2.zero()] * self.pi_dim
 
@@ -335,12 +390,35 @@ class Equation():
 
         return theta, pi
 
-    def verify(self, comms: Dict, theta, pi):
-        pass
+    def verify(self, comms: Dict, theta: List[B], pi: List[B], CRS):
+        lhs = BT.zero()
+
+        for a_map in self.a_maps:
+            lhs += a_map.eval_lhs(comms, CRS)
+
+        rhs = self.target._iotat(CRS, self.type)
+
+        for i in range(self.pi_dim):
+            rhs += CRS['u'][i].extended_pair(pi[i])
+        for i in range(self.theta_dim):
+            rhs += theta[i].extended_pair(CRS['v'][i])
+
+        print(f"rhs: {rhs}")
+        print(f"lhs: {lhs}")
+
+        return lhs == rhs
+
+    @property
+    def theta_dim(self):
+        return NotImplemented
+
+    @property
+    def pi_dim(self):
+        return NotImplemented
 
 
 class PPEquation(Equation):
-    def __init__(self, name:str, a_maps: List[AMap], target:A):
+    def __init__(self, name:str, a_maps: List[AMap], target:Constant):
         super().__init__(name, a_maps, target, EQUATION_TYPES['PPE'])
 
     @property
@@ -353,7 +431,7 @@ class PPEquation(Equation):
 
 
 class MS1Equation(Equation):
-    def __init__(self, name:str, a_maps: List[AMap], target:A):
+    def __init__(self, name:str, a_maps: List[AMap], target:Constant):
         super().__init__(name, a_maps, target, EQUATION_TYPES['MS1E'])
 
     @property
@@ -366,7 +444,7 @@ class MS1Equation(Equation):
 
 
 class MS2Equation(Equation):
-    def __init__(self, name:str, a_maps: List[AMap], target:A):
+    def __init__(self, name:str, a_maps: List[AMap], target:Constant):
         super().__init__(name, a_maps, target, EQUATION_TYPES['MS2E'])
 
     @property
@@ -379,7 +457,7 @@ class MS2Equation(Equation):
 
 
 class QEquation(Equation):
-    def __init__(self, name:str, a_maps: List[AMap], target:A):
+    def __init__(self, name:str, a_maps: List[AMap], target:Constant):
         super().__init__(name, a_maps, target, EQUATION_TYPES['QE'])
 
     @property

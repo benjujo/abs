@@ -25,5 +25,6 @@ RUN cd charm && make install && ldconfig
 #RUN cd charm && make test
 
 COPY src/ src
+WORKDIR /src
 
 #ENTRYPOINT ["tail", "-f", "/dev/null"]
