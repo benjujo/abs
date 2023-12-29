@@ -21,6 +21,9 @@ class Element():
     def __pow__(self, other):
         return NotImplemented
 
+    def __invert__(self):
+        return ELEMENT_DICT[self.group_element.type](~self.group_element)
+
     def pair(self, other):
         return NotImplemented
 
@@ -71,12 +74,12 @@ class ZpElement(Element):
         super().__init__(group_element)
 
     def __add__(self, other):
-        if isinstance(other, ZpElement):
+        if not isinstance(other, ZpElement):
             raise Exception('Not a Zp element')
         return ZpElement(self.group_element + other.group_element)
 
     def __sub__(self, other):
-        if isinstance(other, ZpElement):
+        if not isinstance(other, ZpElement):
             raise Exception('Not a Zp element')
         return ZpElement(self.group_element - other.group_element)
 
