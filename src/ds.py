@@ -1,5 +1,5 @@
-from .GS.elements import ZpElement, G1Element, G2Element
-from typing import List, Tuple
+from GS.elements import ZpElement, G1Element, G2Element
+from typing import List, Tuple, Dict
 
 
 class FBB():
