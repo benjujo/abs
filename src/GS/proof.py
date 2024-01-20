@@ -16,6 +16,14 @@ class GS():
         self.CRS = CRS
         self.trapdoor = trapdoor
 
+    @property
+    def g(self):
+        return self.CRS['u1'].e1
+
+    @property
+    def h(self):
+        return self.CRS['v1'].e1
+
     @classmethod
     def setup(cls, binding=True):
         alpha1 = ZpElement.random()
@@ -43,21 +51,22 @@ class GS():
         trapdoor = {'alpha1': alpha1, 'alpha2': alpha2, 't1': t1, 't2': t2}
         return cls(CRS, trapdoor)
 
-    def prove(self, equations: List[Equation], variables: List[Variable]):
-        vars = {v.name: v for v in variables}
+    def prove(self, equations: List[Equation], variables: Dict[str, Variable]):
+        #vars = {v.name: v for v in variables}
 
         for eq in equations:
-            if not eq.check(vars):
-                raise EquationNotValid
+            if not eq.check(variables):
+                raise Exception('Equation {} is not satisfied'.format(eq.name))
         
-        list_comms = [v.commit(self.CRS) for v in variables]
-        comms = {c.name: c for c in list_comms}
+        #list_comms = [v.commit(self.CRS) for v in variables]
+        #comms = {c.name: c for c in list_comms}
+        comms = {k: v.commit(self.CRS) for k,v in variables.items()}
 
         thetas = {}
         pis = {}
 
         for eq in equations:
-            theta, pi = eq.prove(comms, vars, self.CRS)
+            theta, pi = eq.prove(comms, variables, self.CRS)
 
             thetas[eq.name] = theta
             pis[eq.name] = pi
@@ -66,41 +75,35 @@ class GS():
 
         return proof
 
-    def _verify(self, equations: List[Equation], thetas: Dict[str, List[Element]], pis: Dict[str, List[Element]], comms: Dict[str, Element], CRS):
-        for eq in equations:
-            eq_name = eq.name
-
-            theta = thetas[eq_name]
-            pi = pis[eq_name]
-
-            if not eq.verify(comms, theta, pi, CRS):
-                return False
-        return True
+    def _verify(self, equations: List[Equation], thetas: Dict[str, List[B1]], pis: Dict[str, List[B2]], comms: Dict[str, Element], CRS):
+        return {eq.name: eq.verify(comms, thetas[eq.name], pis[eq.name], CRS) for eq in equations}
 
     def verify(self, equations: List[Equation], proof: "Proof"):
         thetas = proof.thetas
         pis = proof.pis
         comms = proof.comms
 
-        return self._verify(equations, thetas, pis, comms, self.CRS)
+        eq_verifications = self._verify(equations, thetas, pis, comms, self.CRS)
+        print(eq_verifications)
+        return all(eq_verifications.values())
 
     def serialize(self):
         return json.dumps(self.CRS, default=json_serializer)
 
     @classmethod
-    def deserialize(cls, gs_json):
+    def from_json(cls, gs_json):
         gs_dict = json.loads(gs_json)
         u1 = B1.from_json(gs_dict['u1'])
         u2 = B1.from_json(gs_dict['u2'])
         v1 = B2.from_json(gs_dict['v1'])
         v2 = B2.from_json(gs_dict['v2'])
 
-        CRS = {'u1': u1, 'u2': u2, 'v1': v1, 'v2': v2}
+        CRS = {'u1': u1, 'u2': u2, 'v1': v1, 'v2': v2, 'u': [u1, u2], 'v': [v1, v2]}
         return cls(CRS)
 
 
 class Proof:
-    def __init__(self, thetas: Dict[str, List[Element]], pis: Dict[str, List[Element]], comms: Dict[str, Element]):
+    def __init__(self, thetas: Dict[str, List[B1]], pis: Dict[str, List[B2]], comms: Dict[str, Element]):
         self.thetas = thetas
         self.pis = pis
         self.comms = comms
