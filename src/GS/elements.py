@@ -24,6 +24,9 @@ class Element():
     def __invert__(self):
         return ELEMENT_DICT[self.group_element.type](~self.group_element)
 
+    def __neg__(self):
+        return ELEMENT_DICT[self.group_element.type](-self.group_element)
+
     def pair(self, other):
         return NotImplemented
 
@@ -103,6 +106,19 @@ class ZpElement(Element):
     @staticmethod
     def hash_from_string(string: str):
         return Element.hash_from_string(string, ZR)
+
+    @staticmethod
+    def init(num: int):
+        return ZpElement(group.init(ZR, num))
+
+    @staticmethod
+    def from_str(string: str):
+        number = int.from_bytes(string.encode('utf-8'), byteorder='big', signed=False)
+        return ZpElement(group.init(ZR, number))
+
+    def to_str(self):
+        z = self.group_element
+        return (z).to_bytes(math.ceil((z).bit_length() / 8), byteorder = 'big', signed=False).decode('utf-8')
 
 
 class G1Element(Element):
