@@ -82,6 +82,10 @@ class Variable(A):
         self.position = position
         super().__init__(element)
 
+    @classmethod
+    def reference(cls, name: str, position: int = 0):
+        return cls(name, None, position)
+
     def _randomize(self, CRS):
         if self.position == 1 or self.element.type == G1:
             return self._randomize1(CRS)

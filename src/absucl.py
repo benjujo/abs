@@ -177,8 +177,8 @@ class ABSUCL():
         G_eq = MS1Equation("G", [G_amap1, G_amap2], Constant(G1Element.zero()))
         G_eq._validate()
 
-        #fbb_amap1 = AMapLeft(variables['sigmasmile'], Constant(self.vk_psdo[0] + self.vk_psdo[1] + psdo_attr * self.h)) # TODO: This wont work!!!
-        fbb_amap1 = AMapLeft(variables['sigmasmile'], Constant(self.vk_psdo[0] + self.vk_psdo[1] + ZpElement.random() * self.h)) # TODO: Could be anything?
+        fbb_amap1 = AMapLeft(variables['sigmasmile'], Constant(self.vk_psdo[0] + self.vk_psdo[1] + psdo_attr * -self.h)) # TODO: This wont work!!!
+        #fbb_amap1 = AMapLeft(variables['sigmasmile'], Constant(self.vk_psdo[0] + self.vk_psdo[1] + ZpElement.random() * self.h)) # TODO: Could be anything?
         fbb_amap2 = AMapLeft(variables['Gsmile'], Constant(self.h))
         fbb_eq = PPEquation("fbb", [fbb_amap1, fbb_amap2], Constant(GTElement.zero()))
         fbb_eq._validate()
@@ -189,19 +189,131 @@ class ABSUCL():
         eqs = msp_eqs + [tag_eq, is_consistent_eq] + rpsps_eqs + psdo_eqs
         proof = self.gs.prove(eqs, variables)
 
-        # TODO: delete eqs... Just to prove that it works
-        return proof, eqs
+        return {
+            "pi": proof,
+            "tau": tag,
+            "sk_ida_hat": {k: v[0] for k,v in randomized_sk_ida.items()},
+        }
+
+
+    def verify(self, m:str, predicate:str, signature:Dict, recip:int):
+        """
+        vk are implicit in self.vk_attrs
+        """
+        proof = signature["pi"]
+        tag = signature["tau"]
+        sk_ida_hat = signature["sk_ida_hat"]
+
+        psdo_attr = ZpElement.hash_from_string(f"{m}{predicate}{recip}")
+        #xpredicate = f"({predicate}) or {psdo_attr}"
+        xpredicate = f"({predicate}) or PSDO"
+        msp = MSP.from_policy_str(xpredicate)
+
+        for attr_name in msp.index:
+            if not attr_name in self.vk_attrs:
+                if attr_name == "PSDO": continue
+                raise Exception(f"Attribute {attr_name} not found in attribute authorities")
 
 
 
-    def verify(self):
-        pass
+        # Equations
+        # 1. MSP equations
+        msp_eqs = []
 
-    def link(self):
-        pass
+        # First column
+        first_column_amaps = []
+        for i,attr_name in enumerate(msp.index):
+            Mz = AMapRight(Constant(msp.msp[i][0]), Variable.reference(f"z_{attr_name}"))
+            first_column_amaps.append(Mz)
+        msp_eq0 = QEquation("msp_0", first_column_amaps, Constant(ZpElement.init(1)))
+        msp_eq0._validate()
+        msp_eqs.append(msp_eq0)
 
-    def identify(self):
-        pass
+        # Other columns
+        for column in range(1, msp.width):
+            column_amaps = []
+            for i,attr_name in enumerate(msp.index):
+                Mz = AMapRight(Constant(msp.msp[i][column]), Variable.reference(f"z_{attr_name}"))
+                column_amaps.append(Mz)
+            msp_eq = QEquation(f"msp_{column}", column_amaps, Constant(ZpElement.init(0)))
+            msp_eq._validate()
+            msp_eqs.append(msp_eq)
+
+        # 2. Tag equation
+        tag_amap = AMapRight(Constant(tag), Variable.reference("Ftilda"))
+        tag_target = Constant(self.g.pair(self.h) * ~tag.pair(ZpElement.init(recip) * self.h))
+        tag_eq = PPEquation("tag", [tag_amap], tag_target)
+        tag_eq._validate()
+
+        # 3. Is Consistent equation
+        is_consistent_amap1 = AMapLeft(Variable.reference("F"), Constant(self.h))
+        is_consistent_amap2 = AMapRight(Constant(~self.g), Variable.reference("Ftilda"))
+        is_consistent_target = Constant(GTElement.zero())
+        is_consistent_eq = PPEquation("is_consistent", [is_consistent_amap1, is_consistent_amap2], is_consistent_target)
+        is_consistent_eq._validate()
+
+        # 4. RPSPS verify equations
+        rpsps_eqs = []
+        for attr_name in msp.index:
+            if attr_name == "PSDO":
+                continue
+            S_amap1 = AMapBoth(Variable.reference(f"S_{attr_name}"), Variable.reference(f"z_{attr_name}"))
+            S_amap2 = AMapLeft(Variable.reference(f"Ssmile_{attr_name}"), Constant(ZpElement.init(-1)))
+            S_eq = MS1Equation(f"S_{attr_name}", [S_amap1, S_amap2], Constant(G1Element.zero()))
+            S_eq._validate()
+
+            R_amap1 = AMapRight(Constant(sk_ida_hat[attr_name]), Variable.reference(f"z_{attr_name}"))
+            R_amap2 = AMapLeft(Variable.reference(f"Rsmile_{attr_name}"), Constant(ZpElement.init(-1)))
+            R_eq = MS1Equation(f"R_{attr_name}", [R_amap1, R_amap2], Constant(G1Element.zero()))
+            R_eq._validate()
+
+            a_attr = ZpElement.from_str(attr_name)
+            V_amap1 = AMapBoth(Variable.reference(f"Rsmile_{attr_name}"), Variable.reference("Ftilda"))
+            V_amap2 = AMapLeft(Variable.reference(f"Rsmile_{attr_name}"), Constant(self.vk_attrs[attr_name][0])) # vk_attrs[name] => [X,Y,Z]
+            V_amap3 = AMapLeft(Variable.reference(f"Rsmile_{attr_name}"), Constant(a_attr * self.vk_attrs[attr_name][1]))
+            V_amap4 = AMapLeft(Variable.reference(f"Ssmile_{attr_name}"), Constant(~self.vk_attrs[attr_name][2]))
+            V_eq = PPEquation(f"V_{attr_name}", [V_amap1, V_amap2, V_amap3, V_amap4], Constant(GTElement.zero()))
+            V_eq._validate()
+
+            rpsps_eqs.append(S_eq)
+            rpsps_eqs.append(R_eq)
+            rpsps_eqs.append(V_eq)
+
+        # 5. psdo verify equations
+        sigma_amap1 = AMapBoth(Variable.reference("sigma"), Variable.reference("z_PSDO"))
+        sigma_amap2 = AMapLeft(Variable.reference("sigmasmile"), Constant(ZpElement.init(-1)))
+        sigma_eq = MS1Equation("sigma", [sigma_amap1, sigma_amap2], Constant(G1Element.zero()))
+        sigma_eq._validate()
+
+        G_amap1 = AMapRight(Constant(self.g), Variable.reference("z_PSDO"))
+        G_amap2 = AMapLeft(Variable.reference("Gsmile"), Constant(ZpElement.init(-1)))
+        G_eq = MS1Equation("G", [G_amap1, G_amap2], Constant(G1Element.zero()))
+        G_eq._validate()
+
+        fbb_amap1 = AMapLeft(Variable.reference('sigmasmile'), Constant(self.vk_psdo[0] + self.vk_psdo[1] + psdo_attr * -self.h)) # TODO: This wont work!!!
+        #fbb_amap1 = AMapLeft(Variable.reference('sigmasmile'), Constant(self.vk_psdo[0] + self.vk_psdo[1] + ZpElement.random() * self.h)) # TODO: Could be anything?
+        fbb_amap2 = AMapLeft(Variable.reference('Gsmile'), Constant(self.h))
+        fbb_eq = PPEquation("fbb", [fbb_amap1, fbb_amap2], Constant(GTElement.zero()))
+        fbb_eq._validate()
+
+        psdo_eqs = [sigma_eq, G_eq, fbb_eq]
+
+
+        eqs = msp_eqs + [tag_eq, is_consistent_eq] + rpsps_eqs + psdo_eqs
+        verify = self.gs.verify(eqs, proof)
+        return verify
+
+    def link(self, m1:str, predicate1:str, signature1:Dict, m2:str, predicate2:str, signature2:Dict, recip:int,):
+        verify1 = self.verify(m1, predicate1, signature1, recip)
+        if not verify1: return False
+        verify2 = self.verify(m2, predicate2, signature2, recip)
+        if not verify2: return False
+        return signature1["tau"] == signature2["tau"]
+
+    def identify(self, usk:ZpElement, m:str, predicate:str, signature:Dict, recip:int):
+        verify = self.verify(m, predicate, signature, recip)
+        if not verify: return False
+        return signature["tau"] == self.lit.sign(usk, ZpElement.init(recip))
 
     @property
     def CRS(self):
