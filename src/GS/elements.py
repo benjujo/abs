@@ -1,4 +1,5 @@
 from charm.toolbox.pairinggroup import PairingGroup,ZR,G1,G2,GT,pair,pairing
+from charm.core.engine.util import objectToBytes, bytesToObject
 
 
 group = PairingGroup('BN254')
@@ -38,6 +39,13 @@ class Element():
 
     def __json__(self):
         return group.serialize(self.group_element).decode('utf-8')
+
+    def to_bytes(self):
+        return objectToBytes(self.group_element, group)
+
+    @classmethod
+    def from_bytes(cls, bytes_element):
+        return cls(bytesToObject(bytes_element, group))
 
     @staticmethod
     def zero(group_type):
