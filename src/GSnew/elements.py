@@ -221,3 +221,6 @@ ELEMENT_DICT = {
     2: G2Element,
     3: GTElement
 }
+
+g1 = G1Element.random()
+g2 = G2Element.random()
