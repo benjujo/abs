@@ -23,6 +23,7 @@ RUN cd charm && make
 RUN cd charm && make install && ldconfig
 
 #RUN cd charm && make test
+RUN python3.7 -m pip install numpy lark
 
 COPY src/ src
 WORKDIR /src

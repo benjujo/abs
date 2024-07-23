@@ -131,10 +131,15 @@ class CRS():
         
 
 def proof(crs: CRS, eqs: equations, vars: variables):
-    m = len(vars.g1)
-    m_prime = len(vars.zpl)
-    n = len(vars.g2)
-    n_prime = len(vars.zpr)
+    X = vars.g1
+    Y = vars.g2
+    x = vars.zpl
+    y = vars.zpr
+    
+    m = len(X)
+    m_prime = len(x)
+    n = len(Y)
+    n_prime = len(y)
     
     R = np.array([[ZpElement.random() for _ in range(2)] for _ in range(m)]) # shape (m, 2) of Zp
     r = np.array([ZpElement.random() for _ in range(m_prime)]) # shape (m,) of Zp
@@ -147,10 +152,56 @@ def proof(crs: CRS, eqs: equations, vars: variables):
 
     d = np.array(map(crs.iota_2, vars.g2)) + S*crs.v # shape ()
     d_prime = np.array(map(crs.iota_prime_2, vars.zpr)) + s*crs.v1
+    
+    pis = []
+    thetas = []
 
     for eq in eqs.ppe:
         A = eq.A
         B = eq.B
+        Gamma = eq.Gamma
 
         T = random_zp(2,2)
-        pi = R.T * crs.iota_2()
+        pi = R.T * crs.iota_2(B) + R.T * Gamma * crs.iota_2(Y) + (R.T * Gamma * S - T.T) * crs.v
+        theta = S.T * crs.iota_1(A) + S.T * Gamma.T * crs.iota_1(X) + T * crs.u
+        
+        pis.append(pi)
+        thetas.append(theta)
+        
+    for eq in eqs.ms1:
+        A = eq.A
+        b = eq.b
+        Gamma = eq.Gamma
+
+        T = random_zp(1,2)
+        pi = R.T * crs.iota_prime_2(b) + R.T * Gamma * crs.iota_prime_2(y) + (R.T * Gamma * s - T.T) * crs.v1
+        theta = s.T * crs.iota_1(A) + s.T * Gamma.T * crs.iota_1(X) + T * crs.u
+
+        pis.append(pi)
+        thetas.append(theta)
+        
+    for eq in eqs.ms2:
+        a = eq.a
+        B = eq.B
+        Gamma = eq.Gamma
+
+        T = random_zp(2,1)
+        pi = r.T * crs.iota_2(B) + r.T * Gamma * crs.iota_2(Y) + (r.T * Gamma * S - T.T) * crs.v
+        theta = S.T * crs.iota_prime_1(a) + S.T * Gamma.T * crs.iota_prime_1(x) + T * crs.u1
+
+        pis.append(pi)
+        thetas.append(theta)
+        
+    for eq in eqs.qe:
+        a = eq.a
+        b = eq.b
+        Gamma = eq.Gamma
+
+        T = ZpElement.random()
+        pi = r.T * crs.iota_prime_2(b) + r.T * Gamma * crs.iota_prime_2(y) + (r.T * Gamma * s - T) * crs.v1
+        theta = s.T * crs.iota_prime_1(a) + s.T * Gamma.T * crs.iota_prime_1(x) + T * crs.u1
+        
+        pis.append(pi)
+        thetas.append(theta)
+        
+    return c, c_prime, d, d_prime, pis, thetas

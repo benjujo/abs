@@ -1,0 +1,33 @@
+start         : vars consts eqs
+
+vars          : "variables:" _NL _INDENT var+ _DEDENT
+
+consts        : "constants:" _NL _INDENT const+ _DEDENT
+
+eqs           : "equations:" _NL _INDENT eq+ _DEDENT
+
+
+var           : NAME ":" ELEMENT_TYPE _NL
+const         : NAME ":" ELEMENT_TYPE _NL
+
+
+eq            : [eq_expr ("+" eq_expr)*] "=" NAME ":" EQUATION_TYPE _NL
+                | [eq_expr ("*" eq_expr)*] "=" NAME ":" EQUATION_TYPE _NL
+
+eq_expr       : "e" "(" NAME "," NAME ")" 
+                | "e" "(" NAME "," NAME "*" NAME ")"
+                | NAME "*" NAME
+                | NAME "*" NAME "*" NAME
+
+
+
+ELEMENT_TYPE  : "G1" | "G2" | "ZP" | "GT"
+EQUATION_TYPE : "PPE" | "MS1" | "MS2" | "QE"
+
+_NL           : /(\r?\n[\t ]*)+/
+
+
+%import common.WS_INLINE
+%import common.CNAME -> NAME
+%declare _INDENT _DEDENT
+%ignore WS_INLINE
