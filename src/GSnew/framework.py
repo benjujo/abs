@@ -1,5 +1,6 @@
 import numpy as np
 from .elements import (
+    Element,
     ZpElement,
     G1Element, # pairing function as method on G1Element
     G2Element,
@@ -16,10 +17,15 @@ class Equation():
         pass
 
 
-class variables(list):
+class Variable():
+    def __init__(self, name, element):
+        self.name = name
+        self.element = element
+
+
+class variables(dict):
     def _by_element_type(self, et):
-        # TODO: make it compilant to AST
-        return list(item for item in self if item.type == et)
+        return {k:v for k,v in self.items() if v.type == et}
     
     @property
     def g1(self):
@@ -31,12 +37,10 @@ class variables(list):
     
     @property
     def zpl(self):
-        # TODO: fix this
-        return self._by_element_type(0)
+        return self._by_element_type(-1)
     
     @property
     def zpr(self):
-        # TODO: fix this
         return self._by_element_type(0)
 
 
