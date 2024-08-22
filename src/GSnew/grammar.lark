@@ -11,18 +11,14 @@ var           : NAME ":" ELEMENT_TYPE _NL
 const         : NAME ":" ELEMENT_TYPE _NL
 
 
-eq            : [eq_expr ("+" eq_expr)*] "=" NAME ":" EQUATION_TYPE _NL
-                | [eq_expr ("*" eq_expr)*] "=" NAME ":" EQUATION_TYPE _NL
+eq            : [mul_eq ("+" mul_eq)*] "=" NAME _NL
 
-eq_expr       : "e" "(" NAME "," NAME ")" 
-                | "e" "(" NAME "," NAME "*" NAME ")"
-                | NAME "*" NAME
-                | NAME "*" NAME "*" NAME
+mul_eq        :  NAME "*" NAME
+              |  NAME "*" NAME "*" NAME
 
 
 
 ELEMENT_TYPE  : "G1" | "G2" | "ZP" | "GT"
-EQUATION_TYPE : "PPE" | "MS1" | "MS2" | "QE"
 
 _NL           : /(\r?\n[\t ]*)+/
 

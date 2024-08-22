@@ -18,14 +18,14 @@ class Equation():
 
 
 class Variable():
-    def __init__(self, name, element):
-        self.name = name
+    def __init__(self, element, vtype=None):
         self.element = element
+        self.vtype = vtype
 
 
 class variables(dict):
     def _by_element_type(self, et):
-        return {k:v for k,v in self.items() if v.type == et}
+        return {k:v for k,v in self.items() if v.vtype == et}
     
     @property
     def g1(self):
