@@ -213,7 +213,33 @@ class GSNode(abc.ABC):
             eq.type_check(vars_dict, consts_dict)
 
     def compile_proof(self, target):
-        pass
+        prelude = """
+import importlib
+import jinja2
+import nodes
+from nodes import *
+from elements import *
+from equations import *
+from a_elements import *
+from b_elements import *
+from a_maps import *
+from proof import GS
+from compiler import compile_template, compile
+from defs import load_element
+
+vars = {}
+eqs = []
+"""
+        script = prelude
+        for var in self.vars:
+            script += var.compile_proof(target)
+        for const in self.consts:
+            script += const.compile_proof(target)
+        for eq in self.eqs:
+            script += eq.compile_proof(target)
+        return script
+
+
 
     def compile_verification(self, target):
         pass
