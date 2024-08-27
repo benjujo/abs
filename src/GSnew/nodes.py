@@ -17,19 +17,39 @@ class ConstantNode(TypeNode):
         self.name = name
 
 class ConstantG1Node(ConstantNode):
-    pass
+    def compile_proof(self, target):
+        const_name = self.name
+        const_template = f"""
+{const_name} = Constant(load_element({const_name}, 1))
+const['{const_name}'] = {const_name}
+"""
 
 
 class ConstantG2Node(ConstantNode):
-    pass
+    def compile_proof(self, target):
+        const_name = self.name
+        const_template = f"""
+{const_name} = Constant(load_element({const_name}, 2))
+const['{const_name}'] = {const_name}
+"""
 
 
 class ConstantGTNode(ConstantNode):
-    pass
+    def compile_proof(self, target):
+        const_name = self.name
+        const_template = f"""
+{const_name} = Constant(load_element({const_name}, 3))
+const['{const_name}'] = {const_name}
+"""
 
 
 class ConstantZpNode(ConstantNode):
-    pass
+    def compile_proof(self, target):
+        const_name = self.name
+        const_template = f"""
+{const_name} = Constant(load_element({const_name}, 0))
+const['{const_name}'] = {const_name}
+"""
 
 
 # ------ Variables ------
@@ -50,7 +70,8 @@ vars['{var_name}'] = {var_name}
 
 class VariableG1Node(VariableNode):
     def compile_proof(self, target):
-        var_template = """
+        var_name = self.name
+        var_template = f"""
 {var_name} = Variable(load_element({var_name}, 1), 1)
 vars['{var_name}'] = {var_name}
 """
@@ -58,7 +79,8 @@ vars['{var_name}'] = {var_name}
 
 class VariableG2Node(VariableNode):
     def compile_proof(self, target):
-        var_template = """
+        var_name = self.name
+        var_template = f"""
 {var_name} = Variable(load_element({var_name}, 2), 2)
 vars['{var_name}'] = {var_name}
 """
@@ -70,7 +92,8 @@ class VariableZpNode(VariableNode):
 
 class VariableZpLeftNode(VariableZpNode):
     def compile_proof(self, target):
-        var_template = """
+        var_name = self.name
+        var_template = f"""
 {var_name} = Variable(load_element({var_name}, 0), -1)
 vars['{var_name}'] = {var_name}
 """
@@ -78,7 +101,8 @@ vars['{var_name}'] = {var_name}
 
 class VariableZpRightNode(VariableZpNode):
     def compile_proof(self, target):
-        var_template = """
+        var_name = self.name
+        var_template = f"""
 {var_name} = Variable(load_element({var_name}, 0), 0)
 vars['{var_name}'] = {var_name}
 """
