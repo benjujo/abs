@@ -76,8 +76,8 @@ class VariableG1Node(VariableNode):
     def compile_proof(self, target):
         var_name = self.name
         var_template = f"""
-{var_name} = Variable(load_element({var_name}, 1), 1)
-vars['{var_name}'] = {var_name}
+{var_name} = Variable(load_element('{var_name}', 1), 1)
+X.append({var_name})
 """
         return var_template
 
@@ -86,8 +86,8 @@ class VariableG2Node(VariableNode):
     def compile_proof(self, target):
         var_name = self.name
         var_template = f"""
-{var_name} = Variable(load_element({var_name}, 2), 2)
-vars['{var_name}'] = {var_name}
+{var_name} = Variable(load_element('{var_name}', 2), 2)
+Y.append({var_name})
 """
         return var_template
 
@@ -100,8 +100,8 @@ class VariableZpLeftNode(VariableZpNode):
     def compile_proof(self, target):
         var_name = self.name
         var_template = f"""
-{var_name} = Variable(load_element({var_name}, 0), -1)
-vars['{var_name}'] = {var_name}
+{var_name} = Variable(load_element('{var_name}', 0), -1)
+x.append({var_name})
 """
         return var_template
 
@@ -110,8 +110,8 @@ class VariableZpRightNode(VariableZpNode):
     def compile_proof(self, target):
         var_name = self.name
         var_template = f"""
-{var_name} = Variable(load_element({var_name}, 0), 0)
-vars['{var_name}'] = {var_name}
+{var_name} = Variable(load_element('{var_name}', 0), 0)
+y.append({var_name})
 """
         return var_template
 
@@ -294,13 +294,12 @@ from framework import load_element, load_crs, proof, Variable, Constant
 
 CRS = load_crs()
 
-X = {str([v.name for v in self.X])}
-Y = {self.Y}
-x = {self.x}
-y = {self.y}
+X = []
+Y = []
+x = []
+y = []
 
 eqs = []
-vars = {{}}
 """
         script = prelude
         for var in self.vars:
