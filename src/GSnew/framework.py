@@ -134,11 +134,11 @@ class CRS():
         return CRS(u_1, u_2, v_1, v_2, trapdoor=trapdoor)
         
 
-def proof(crs: CRS, eqs: equations, vars: variables):
-    X = vars.g1
-    Y = vars.g2
-    x = vars.zpl
-    y = vars.zpr
+def proof(crs: CRS, eqs: equations, X, Y, x, y):
+    #X = vars.g1
+    #Y = vars.g2
+    #x = vars.zpl
+    #y = vars.zpr
     
     m = len(X)
     m_prime = len(x)

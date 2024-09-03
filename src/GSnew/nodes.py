@@ -23,6 +23,7 @@ class ConstantG1Node(ConstantNode):
 {const_name} = Constant(load_element({const_name}, 1))
 const['{const_name}'] = {const_name}
 """
+        return const_template
 
 
 class ConstantG2Node(ConstantNode):
@@ -32,6 +33,7 @@ class ConstantG2Node(ConstantNode):
 {const_name} = Constant(load_element({const_name}, 2))
 const['{const_name}'] = {const_name}
 """
+        return const_template
 
 
 class ConstantGTNode(ConstantNode):
@@ -41,6 +43,7 @@ class ConstantGTNode(ConstantNode):
 {const_name} = Constant(load_element({const_name}, 3))
 const['{const_name}'] = {const_name}
 """
+        return const_template
 
 
 class ConstantZpNode(ConstantNode):
@@ -50,6 +53,7 @@ class ConstantZpNode(ConstantNode):
 {const_name} = Constant(load_element({const_name}, 0))
 const['{const_name}'] = {const_name}
 """
+        return const_template
 
 
 # ------ Variables ------
@@ -75,6 +79,7 @@ class VariableG1Node(VariableNode):
 {var_name} = Variable(load_element({var_name}, 1), 1)
 vars['{var_name}'] = {var_name}
 """
+        return var_template
 
 
 class VariableG2Node(VariableNode):
@@ -84,6 +89,7 @@ class VariableG2Node(VariableNode):
 {var_name} = Variable(load_element({var_name}, 2), 2)
 vars['{var_name}'] = {var_name}
 """
+        return var_template
 
 
 class VariableZpNode(VariableNode):
@@ -97,6 +103,7 @@ class VariableZpLeftNode(VariableZpNode):
 {var_name} = Variable(load_element({var_name}, 0), -1)
 vars['{var_name}'] = {var_name}
 """
+        return var_template
 
 
 class VariableZpRightNode(VariableZpNode):
@@ -106,6 +113,7 @@ class VariableZpRightNode(VariableZpNode):
 {var_name} = Variable(load_element({var_name}, 0), 0)
 vars['{var_name}'] = {var_name}
 """
+        return var_template
 
 
 # ------ Mul expressions ------
@@ -193,6 +201,39 @@ class PPEquationNode(EquationNode):
             raise TypeError('Not PPE equation.')
         for eq_mul in self:
             eq_mul.type_check(vars, consts)
+            
+    def compute_constants(self, X, Y, x, y, consts_dict):
+        # A*Y + X*B + X*g*Y = T
+        n = len(X)
+        m = len(Y)
+        A = [0] * m
+        B = [0] * n
+        g = [[0] * n] * m
+        for i,var in enumerate(X):
+            # find the eq_mul that has var as left
+            eq_mul = next((eq_mul for eq_mul in self if eq_mul.left == var.name), None)
+            if eq_mul:
+                B[i] = eq_mul.right
+        for i,var in enumerate(Y):
+            # find the eq_mul that has var as right
+            eq_mul = next((eq_mul for eq_mul in self if eq_mul.right == var.name), None)
+            if eq_mul:
+                A[i] = eq_mul.left
+        for i,xvar in enumerate(X):
+            for j,yvar in enumerate(Y):
+                eq_mul = next((eq_mul for eq_mul in self if eq_mul.left == xvar.name and eq_mul.right == yvar.name), None)
+                if eq_mul:
+                    g[i][j] = eq_mul.gamma
+        self.a = A
+        self.b = B
+        self.g = g
+        
+            
+    def compile_proof(self, target):
+        eq_template = f"""
+eqs.append(({self.a}, {self.b}, {self.g}, {self.target}))
+"""
+        return eq_template
 
 
 class MS1EquationNode(EquationNode):
@@ -233,25 +274,31 @@ class GSNode(abc.ABC):
         vars_dict = {v.name:v for v in self.vars}
         consts_dict = {c.name:c for c in self.consts}
         self.assign_eqs_type(consts_dict)
+        X = [v for v in vars_dict.values() if isinstance(v, VariableG1Node)]
+        Y = [v for v in vars_dict.values() if isinstance(v, VariableG2Node)]
+        x = [v for v in vars_dict.values() if isinstance(v, VariableZpLeftNode)]
+        y = [v for v in vars_dict.values() if isinstance(v, VariableZpRightNode)]
         for eq in self.eqs:
             eq.type_check(vars_dict, consts_dict)
+            eq.compute_constants(X, Y, x, y, consts_dict)
+        self.X = X
+        self.Y = Y
+        self.x = x
+        self.y = y
+        
 
     def compile_proof(self, target):
-        prelude = """
-import importlib
-import jinja2
-import nodes
+        prelude = f"""
 from nodes import *
-from elements import *
-from equations import *
-from a_elements import *
-from b_elements import *
-from a_maps import *
-from proof import GS
-from compiler import compile_template, compile
-from defs import load_element
+from framework import load_element, load_crs, proof, Variable, Constant
 
-vars = {}
+CRS = load_crs()
+
+X = {self.X}
+Y = {self.Y}
+x = {self.x}
+y = {self.y}
+
 eqs = []
 """
         script = prelude
@@ -261,6 +308,8 @@ eqs = []
             script += const.compile_proof(target)
         for eq in self.eqs:
             script += eq.compile_proof(target)
+            
+        script += "proof(CRS, eqs, X, Y, x, y)"
         return script
 
 

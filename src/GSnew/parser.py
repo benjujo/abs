@@ -30,3 +30,6 @@ with open("bls.gs", "r") as f:
 from ast_builder import ASTTransformer
 t=ASTTransformer()
 r=t.transform(p)
+
+r.type_check()
+p=r.compile_proof(None)
