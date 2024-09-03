@@ -294,12 +294,13 @@ from framework import load_element, load_crs, proof, Variable, Constant
 
 CRS = load_crs()
 
-X = {self.X}
+X = {str([v.name for v in self.X])}
 Y = {self.Y}
 x = {self.x}
 y = {self.y}
 
 eqs = []
+vars = {{}}
 """
         script = prelude
         for var in self.vars:

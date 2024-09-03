@@ -4,12 +4,13 @@ from framework import load_element, load_crs, proof, Variable, Constant
 
 CRS = load_crs()
 
-X = [<nodes.VariableG1Node object at 0x7feb7af96850>]
+X = ['sigma']
 Y = []
 x = []
 y = []
 
 eqs = []
+vars = {}
 
 sigma = Variable(load_element(sigma, 1), 1)
 vars['sigma'] = sigma
