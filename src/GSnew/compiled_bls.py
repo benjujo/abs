@@ -1,25 +1,25 @@
-
-from nodes import *
-from framework import load_element, load_crs, proof, Variable, Constant
+from framework import load_element, load_crs, vars_array, Equation, equations, proof
 
 CRS = load_crs()
 
-X = ['sigma']
+X = []
 Y = []
 x = []
 y = []
 
-eqs = []
-vars = {}
+eqs = equations()
+const = []
 
-sigma = Variable(load_element(sigma, 1), 1)
-vars['sigma'] = sigma
+sigma = load_element('sigma', 1)
+X.append(('sigma', sigma))
 
-pkg = Constant(load_element(pkg, 2))
+pkg = load_element('pkg', 2)
 const['pkg'] = pkg
 
-t = Constant(load_element(t, 3))
+t = load_element('t', 3)
 const['t'] = t
 
-eqs.append(([], ['pkg'], [], t))
-proof(CRS, eqs, X, Y, x, y)
+eq = Equation([], [pkg], [[]], t, 3)
+eqs.append(eq)
+variables = vars_array(X,Y,x,y)
+proof(CRS, eqs, variables)

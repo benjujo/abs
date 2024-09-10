@@ -33,3 +33,7 @@ r=t.transform(p)
 
 r.type_check()
 p=r.compile_proof(None)
+
+with open('compiled_bls.py', 'w') as f:
+    f.write(p)
+

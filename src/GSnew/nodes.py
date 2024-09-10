@@ -20,7 +20,7 @@ class ConstantG1Node(ConstantNode):
     def compile_proof(self, target):
         const_name = self.name
         const_template = f"""
-{const_name} = Constant(load_element({const_name}, 1))
+{const_name} = load_element('{const_name}', 1)
 const['{const_name}'] = {const_name}
 """
         return const_template
@@ -30,7 +30,7 @@ class ConstantG2Node(ConstantNode):
     def compile_proof(self, target):
         const_name = self.name
         const_template = f"""
-{const_name} = Constant(load_element({const_name}, 2))
+{const_name} = load_element('{const_name}', 2)
 const['{const_name}'] = {const_name}
 """
         return const_template
@@ -40,7 +40,7 @@ class ConstantGTNode(ConstantNode):
     def compile_proof(self, target):
         const_name = self.name
         const_template = f"""
-{const_name} = Constant(load_element({const_name}, 3))
+{const_name} = load_element('{const_name}', 3)
 const['{const_name}'] = {const_name}
 """
         return const_template
@@ -50,7 +50,7 @@ class ConstantZpNode(ConstantNode):
     def compile_proof(self, target):
         const_name = self.name
         const_template = f"""
-{const_name} = Constant(load_element({const_name}, 0))
+{const_name} = load_element('{const_name}', 0)
 const['{const_name}'] = {const_name}
 """
         return const_template
@@ -76,8 +76,8 @@ class VariableG1Node(VariableNode):
     def compile_proof(self, target):
         var_name = self.name
         var_template = f"""
-{var_name} = Variable(load_element('{var_name}', 1), 1)
-X.append({var_name})
+{var_name} = load_element('{var_name}', 1)
+X.append(('{var_name}', {var_name}))
 """
         return var_template
 
@@ -86,8 +86,8 @@ class VariableG2Node(VariableNode):
     def compile_proof(self, target):
         var_name = self.name
         var_template = f"""
-{var_name} = Variable(load_element('{var_name}', 2), 2)
-Y.append({var_name})
+{var_name} = load_element('{var_name}', 2)
+Y.append(('{var_name}', {var_name}))
 """
         return var_template
 
@@ -100,8 +100,8 @@ class VariableZpLeftNode(VariableZpNode):
     def compile_proof(self, target):
         var_name = self.name
         var_template = f"""
-{var_name} = Variable(load_element('{var_name}', 0), -1)
-x.append({var_name})
+{var_name} = load_element('{var_name}', 0)
+x.append(('{var_name}', {var_name}))
 """
         return var_template
 
@@ -110,8 +110,8 @@ class VariableZpRightNode(VariableZpNode):
     def compile_proof(self, target):
         var_name = self.name
         var_template = f"""
-{var_name} = Variable(load_element('{var_name}', 0), 0)
-y.append({var_name})
+{var_name} = load_element('{var_name}', 0)
+y.append(('{var_name}', {var_name}))
 """
         return var_template
 
@@ -204,26 +204,26 @@ class PPEquationNode(EquationNode):
             
     def compute_constants(self, X, Y, x, y, consts_dict):
         # A*Y + X*B + X*g*Y = T
-        n = len(X)
-        m = len(Y)
-        A = [0] * m
-        B = [0] * n
+        m = len(X)
+        n = len(Y)
+        A = [0] * n
+        B = [0] * m
         g = [[0] * n] * m
         for i,var in enumerate(X):
             # find the eq_mul that has var as left
             eq_mul = next((eq_mul for eq_mul in self if eq_mul.left == var.name), None)
             if eq_mul:
                 B[i] = eq_mul.right
-        for i,var in enumerate(Y):
+        for j,var in enumerate(Y):
             # find the eq_mul that has var as right
             eq_mul = next((eq_mul for eq_mul in self if eq_mul.right == var.name), None)
             if eq_mul:
-                A[i] = eq_mul.left
+                A[j] = consts_dict[eq_mul.left]
         for i,xvar in enumerate(X):
             for j,yvar in enumerate(Y):
                 eq_mul = next((eq_mul for eq_mul in self if eq_mul.left == xvar.name and eq_mul.right == yvar.name), None)
                 if eq_mul:
-                    g[i][j] = eq_mul.gamma
+                    g[i][j] = consts_dict[eq_mul.gamma]
         self.a = A
         self.b = B
         self.g = g
@@ -231,7 +231,8 @@ class PPEquationNode(EquationNode):
             
     def compile_proof(self, target):
         eq_template = f"""
-eqs.append(({self.a}, {self.b}, {self.g}, {self.target}))
+eq = Equation([{', '.join(self.a)}], [{', '.join(self.b)}], [{'], ['.join(['[' + ', '.join(row) + ']' for row in self.g])}], {self.target}, 3)
+eqs.append(eq)
 """
         return eq_template
 
@@ -289,8 +290,7 @@ class GSNode(abc.ABC):
 
     def compile_proof(self, target):
         prelude = f"""
-from nodes import *
-from framework import load_element, load_crs, proof, Variable, Constant
+from framework import load_element, load_crs, vars_array, Equation, equations, proof
 
 CRS = load_crs()
 
@@ -299,7 +299,8 @@ Y = []
 x = []
 y = []
 
-eqs = []
+eqs = equations()
+const = []
 """
         script = prelude
         for var in self.vars:
@@ -309,7 +310,8 @@ eqs = []
         for eq in self.eqs:
             script += eq.compile_proof(target)
             
-        script += "proof(CRS, eqs, X, Y, x, y)"
+        script += "variables = vars_array(X,Y,x,y)\n"
+        script += "proof(CRS, eqs, variables)\n"
         return script
 
 

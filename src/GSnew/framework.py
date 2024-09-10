@@ -1,52 +1,62 @@
 import numpy as np
-from .elements import (
+from elements import (
     Element,
     ZpElement,
     G1Element, # pairing function as method on G1Element
     G2Element,
     GTElement,
     g1,
-    g2)
+    g2,)
+
+import json
+
+global json_defs
+global crs
+json_defs = None
+crs = None
+
+def load_element(name, element_type, filename='defs.json'):
+    # Fortunately, charm doesn't need to know the element type
+    if not json_defs:
+        with open(filename, 'r') as f:
+            json_defs = json.load(f)
+    if name == 'g1':
+        return g1
+    if name == 'g2':
+        return g2
+    element_string = json_defs[name]
+    return Element.from_json(element_string)
+
+def load_crs(new=None, filename='crs.json'):
+    if not crs:
+        try:
+            with open(filename, 'r') as f:
+                crs = json.load(f)
+        except FileNotFoundError:
+            if new == 'sound':
+                crs = CRS.new_sound()
+            elif new == 'wi':
+                crs = CRS.new_wi()
+            else:
+                raise Exception('CRS not valid')
+    return crs
+
 
 def random_zp(a,b):
     return np.array([[ZpElement.random() for _ in range(b)] for _ in range(a)])
 
 
 class Equation():
-    def __init__(self):
-        pass
-
-
-class Variable():
-    def __init__(self, element, vtype=None):
-        self.element = element
-        self.vtype = vtype
-
-
-class variables(dict):
-    def _by_element_type(self, et):
-        return {k:v for k,v in self.items() if v.vtype == et}
-    
-    @property
-    def g1(self):
-        return self._by_element_type(1)
-    
-    @property
-    def g2(self):
-        return self._by_element_type(2)
-    
-    @property
-    def zpl(self):
-        return self._by_element_type(-1)
-    
-    @property
-    def zpr(self):
-        return self._by_element_type(0)
-
-
+    def __init__(self, a, b, Gamma, etype):
+        self.a = a
+        self.b = b
+        self.Gamma = Gamma
+        self.etype = etype
+        
+        
 class equations(list):
     def _by_equation_type(self, et):
-        return list(item for item in self if item.type == et)
+        return list(item for item in self if item.etype == et)
     
     @property
     def ppe(self):
@@ -63,6 +73,52 @@ class equations(list):
     @property
     def qe(self):
         return self._by_element_type(0)
+
+
+class Variable():
+    def __init__(self, element, vtype=None):
+        self.element = element
+        self.vtype = vtype
+
+
+class NamedArray(np.ndarray):
+    def __new__(cls, input_data):
+        # Extract the data, names, and element types from the input tuples
+        data = [item[0] for item in input_data]
+        names = [item[1] for item in input_data]
+        
+        # Create the ndarray
+        obj = np.asarray(data).view(cls)
+        # Store the names and element types as instance attributes
+        obj.names = names
+        return obj
+
+    def __array_finalize__(self, obj):
+        if obj is None: return
+        self.names = getattr(obj, 'names', None)
+
+    def __getitem__(self, key):
+        if isinstance(key, str):
+            index = self.names.index(key)
+            return super().__getitem__(index)
+        else:
+            return super().__getitem__(key)
+
+    def __setitem__(self, key, value):
+        if isinstance(key, str):
+            index = self.names.index(key)
+            super().__setitem__(index, value)
+        else:
+            super().__setitem__(key, value)
+    
+class vars_array():
+    def __init__(self, X, Y, x, y):
+        self.X = NamedArray(X)
+        self.Y = NamedArray(Y)
+        self.x = NamedArray(x)
+        self.y = NamedArray(y)
+
+
 
 class CRS():
     def __init__(self, u1, u2, v1, v2, trapdoor=None):
@@ -134,11 +190,11 @@ class CRS():
         return CRS(u_1, u_2, v_1, v_2, trapdoor=trapdoor)
         
 
-def proof(crs: CRS, eqs: equations, X, Y, x, y):
-    #X = vars.g1
-    #Y = vars.g2
-    #x = vars.zpl
-    #y = vars.zpr
+def proof(crs: CRS, eqs: equations, variables: vars_array):
+    X = variables.X
+    Y = variables.Y
+    x = variables.x
+    y = variables.y
     
     m = len(X)
     m_prime = len(x)
@@ -148,14 +204,14 @@ def proof(crs: CRS, eqs: equations, X, Y, x, y):
     R = np.array([[ZpElement.random() for _ in range(2)] for _ in range(m)]) # shape (m, 2) of Zp
     r = np.array([ZpElement.random() for _ in range(m_prime)]) # shape (m,) of Zp
 
-    c = np.array(map(crs.iota_1, vars.g1)) + R*crs.u # shape ()
-    c_prime = np.array(map(crs.iota_prime_1, vars.zpl)) + r*crs.u1
+    c = np.array(map(crs.iota_1, X)) + R*crs.u # shape ()
+    c_prime = np.array(map(crs.iota_prime_1, x)) + r*crs.u1
 
     S = np.array([[ZpElement.random() for _ in range(2)] for _ in range(n)]) # shape (m, 2) of Zp
     s = np.array([ZpElement.random() for _ in range(n_prime)]) # shape (m,) of Zp
 
-    d = np.array(map(crs.iota_2, vars.g2)) + S*crs.v # shape ()
-    d_prime = np.array(map(crs.iota_prime_2, vars.zpr)) + s*crs.v1
+    d = np.array(map(crs.iota_2, Y)) + S*crs.v # shape ()
+    d_prime = np.array(map(crs.iota_prime_2, y)) + s*crs.v1
     
     pis = []
     thetas = []

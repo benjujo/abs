@@ -55,10 +55,11 @@ class Element():
     def random(group_type):
         return ELEMENT_DICT[group_type](group.random(group_type))
 
-    @classmethod
-    def from_json(cls, json_str):
-        bytes_element = json_str.encode('utf-8')
-        group_element = group.deserialize(bytes_element)
+    @staticmethod
+    def from_json(json_str):
+        #bytes_element = json_str.encode('utf-8')
+        #group_element = group.deserialize(bytes_element)
+        group_element = bytesToObject(json_str, group)
         return ELEMENT_DICT[group_element.type](group_element)
         
     @staticmethod
