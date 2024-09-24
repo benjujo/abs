@@ -246,7 +246,39 @@ class MS2EquationNode(EquationNode):
 
 
 class QEquationNode(EquationNode):
-    pass
+    def type_check(self, vars, consts):
+        target = consts[self.target]
+        if not isinstance(target, ConstantZpNode):
+            raise TypeError('Not QE equation.')
+        for eq_mul in self:
+            eq_mul.type_check(vars, consts)
+            
+    def compute_constants(self, X, Y, x, y, consts_dict):
+        # a*y + x*b + x*g*y = t
+        m = len(X)
+        n = len(Y)
+        A = [0] * n
+        B = [0] * m
+        g = [[0] * n] * m
+        for i,var in enumerate(X):
+            # find the eq_mul that has var as left
+            eq_mul = next((eq_mul for eq_mul in self if eq_mul.left == var.name), None)
+            if eq_mul:
+                B[i] = eq_mul.right
+        for j,var in enumerate(Y):
+            # find the eq_mul that has var as right
+            eq_mul = next((eq_mul for eq_mul in self if eq_mul.right == var.name), None)
+            if eq_mul:
+                A[j] = consts_dict[eq_mul.left]
+        for i,xvar in enumerate(X):
+            for j,yvar in enumerate(Y):
+                eq_mul = next((eq_mul for eq_mul in self if eq_mul.left == xvar.name and eq_mul.right == yvar.name), None)
+                if eq_mul:
+                    g[i][j] = consts_dict[eq_mul.gamma]
+        self.a = A
+        self.b = B
+        self.g = g
+        
 
 
 class GSNode(abc.ABC):
@@ -300,7 +332,7 @@ x = []
 y = []
 
 eqs = equations()
-const = []
+const = {{}}
 """
         script = prelude
         for var in self.vars:
