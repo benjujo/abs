@@ -224,6 +224,27 @@ class CRS():
         return CRS(u_1, u_2, v_1, v_2, trapdoor=trapdoor)
         
 
+class Proof():
+    def __init__(self, c, c_prime, d, d_prime, pis, thetas):
+        self.c = c
+        self.c_prime = c_prime
+        self.d = d
+        self.d_prime = d_prime
+        self.pis = pis
+        self.thetas = thetas
+
+    def to_json(self):
+        return {
+            'c': self.c,
+            'c_prime': self.c_prime,
+            'd': self.d,
+            'd_prime': self.d_prime,
+            'pis': self.pis,
+            'thetas': self.thetas
+        }
+
+
+
 def proof(crs: CRS, eqs: equations, variables: vars_array):
     X = variables.X
     Y = variables.Y

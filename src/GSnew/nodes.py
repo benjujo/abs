@@ -343,11 +343,35 @@ const = {{}}
             script += eq.compile_proof(target)
             
         script += "variables = vars_array(X,Y,x,y)\n"
-        script += "proof(CRS, eqs, variables)\n"
+        script += "p=proof(CRS, eqs, variables)\n"
         return script
 
 
 
     def compile_verification(self, target):
-        pass
+        prelude = f"""
+from framework import load_element, load_crs, vars_array, Equation, equations, proof
+
+CRS = load_crs()
+
+C = []
+D = []
+c = []
+d = []
+
+eqs = equations()
+const = {{}}
+"""
+        script = prelude
+        for var in self.vars:
+            script += var.compile_proof(target)
+        for const in self.consts:
+            script += const.compile_proof(target)
+        for eq in self.eqs:
+            script += eq.compile_proof(target)
+            
+        script += "variables = vars_array(X,Y,x,y)\n"
+        script += "p=proof(CRS, eqs, variables)\n"
+        return script
+
 
