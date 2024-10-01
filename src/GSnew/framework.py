@@ -148,10 +148,10 @@ class vars_array():
 
 class CRS():
     def __init__(self, u1, u2, v1, v2, trapdoor=None):
-        self.u1 = u1
-        self.u2 = u2
-        self.v1 = v1
-        self.v2 = v2
+        self._u1 = u1
+        self._u2 = u2
+        self._v1 = v1
+        self._v2 = v2
         
     def iota_1(self, x: G1Element):
         return np.array([G1Element.zero(), x])
@@ -169,11 +169,27 @@ class CRS():
 
     @property
     def u(self):
-        return np.array([self.u1, self.u2])
+        return np.array([self._u1, self._u2])
 
     @property
     def v(self):
-        return np.array([self.v1, self.v2])
+        return np.array([self._v1, self._v2])
+    
+    @property
+    def u1(self):
+        return np.array([self._u1])
+    
+    @property
+    def u2(self):
+        return np.array([self._u2])
+    
+    @property
+    def v1(self):
+        return np.array([self._v1])
+    
+    @property
+    def v2(self):
+        return np.array([self._v2])
 
     @staticmethod
     def from_json(json_string):
