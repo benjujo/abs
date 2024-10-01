@@ -141,9 +141,9 @@ class MulPPENode(MulNode):
 
 class MulMS1Node(MulNode):
     def type_check(self, vars, consts):
-        left = vars[self.left]
-        right = vars[self.right]
-        if self.gammma:
+        left = {**vars, **consts}[self.left]
+        right = {**vars, **consts}[self.right]
+        if self.gamma:
             gamma = consts[self.gamma]
             if not (isinstance(gamma, ConstantZpNode)):
                 raise TypeError('gamma is not a ZpConstant')
@@ -156,9 +156,9 @@ class MulMS1Node(MulNode):
 
 class MulMS2Node(MulNode):
     def type_check(self, vars, consts):
-        left = vars[self.left]
-        right = vars[self.right]
-        if self.gammma:
+        left = {**vars, **consts}[self.left]
+        right = {**vars, **consts}[self.right]
+        if self.gamma:
             gamma = consts[self.gamma]
             if not (isinstance(gamma, ConstantZpNode)):
                 raise TypeError('gamma is not a ZpConstant')
@@ -171,16 +171,16 @@ class MulMS2Node(MulNode):
 
 class MulQENode(MulNode):
     def type_check(self, vars, consts):
-        left = vars[self.left]
-        right = vars[self.right]
-        if self.gammma:
+        left = {**vars, **consts}[self.left]
+        right = {**vars, **consts}[self.right]
+        if self.gamma:
             gamma = consts[self.gamma]
             if not (isinstance(gamma, ConstantZpNode)):
                 raise TypeError('gamma is not a ZpConstant')
             if not (isinstance(left, VariableZpNode) and isinstance(right, VariableG1Node)):
                 raise TypeError('Not VV')
-        if not (isinstance(left, VariableZpNode) and isinstance(right, ConstantG1Node)) or \
-        (isinstance(left, ConstantZpNode) and isinstance(right, VariableG1Node)):
+        if not (isinstance(left, VariableZpNode) and isinstance(right, ConstantZpNode)) or \
+        (isinstance(left, ConstantZpNode) and isinstance(right, VariableZpNode)):
             raise TypeError('Neither CV or VC')
 
 # ------ Equations ------
@@ -255,23 +255,23 @@ class QEquationNode(EquationNode):
             
     def compute_constants(self, X, Y, x, y, consts_dict):
         # a*y + x*b + x*g*y = t
-        m = len(X)
-        n = len(Y)
+        m = len(x)
+        n = len(y)
         A = [0] * n
         B = [0] * m
         g = [[0] * n] * m
-        for i,var in enumerate(X):
+        for i,var in enumerate(x):
             # find the eq_mul that has var as left
             eq_mul = next((eq_mul for eq_mul in self if eq_mul.left == var.name), None)
             if eq_mul:
                 B[i] = eq_mul.right
-        for j,var in enumerate(Y):
+        for j,var in enumerate(y):
             # find the eq_mul that has var as right
             eq_mul = next((eq_mul for eq_mul in self if eq_mul.right == var.name), None)
             if eq_mul:
                 A[j] = consts_dict[eq_mul.left]
-        for i,xvar in enumerate(X):
-            for j,yvar in enumerate(Y):
+        for i,xvar in enumerate(x):
+            for j,yvar in enumerate(y):
                 eq_mul = next((eq_mul for eq_mul in self if eq_mul.left == xvar.name and eq_mul.right == yvar.name), None)
                 if eq_mul:
                     g[i][j] = consts_dict[eq_mul.gamma]
@@ -279,6 +279,12 @@ class QEquationNode(EquationNode):
         self.b = B
         self.g = g
         
+    def compile_proof(self, target):
+        eq_template = f"""
+eq = Equation([{', '.join(self.a)}], [{', '.join(self.b)}], [{'], ['.join(['[' + ', '.join(row) + ']' for row in self.g])}], {self.target}, 0)
+eqs.append(eq)
+"""
+        return eq_template
 
 
 class GSNode(abc.ABC):
@@ -302,11 +308,52 @@ class GSNode(abc.ABC):
             if isinstance(target, ConstantZpNode):
                 eq_muls = [MulQENode(eq_mul.left, eq_mul.right, eq_mul.gamma) for eq_mul in eq.eq_muls]
                 self.eqs[i] = QEquationNode(eq_muls, eq.target)
+                
+    def assign_vars_zp(self, vars_dict):
+        for eq in self.eqs:
+            if isinstance(eq, PPEquationNode):
+                continue
+            if isinstance(eq, MS1EquationNode):
+                for eq_mul in eq:
+                    left = vars_dict.get(eq_mul.left)
+                    if left is not None and isinstance(left, VariableZpNode):
+                        if isinstance(left, VariableZpLeftNode):
+                            raise TypeException('ZpLeft in right position')
+                        if isinstance(left, VariableZpRightNode):
+                            continue
+                        vars_dict[eq_mul.left] = VariableZpRightNode(eq_mul.left)
+            if isinstance(eq, MS2EquationNode):
+                for eq_mul in eq:
+                    right = vars_dict.get(eq_mul.right)
+                    if right is not None and isinstance(right, VariableZpNode):
+                        if isinstance(right, VariableZpRightNode):
+                            raise TypeException('ZpRight in left position')
+                        if isinstance(right, VariableZpLeftNode):
+                            continue
+                        vars_dict[eq_mul.right] = VariableZpLeftNode(eq_mul.right)
+            if isinstance(eq, QEquationNode):
+                for eq_mul in eq:
+                    left = vars_dict.get(eq_mul.left)
+                    if left is not None and isinstance(left, VariableZpNode):
+                        if isinstance(left, VariableZpRightNode):
+                            raise TypeException('ZpRight in left position')
+                        if isinstance(left, VariableZpLeftNode):
+                            continue
+                        vars_dict[eq_mul.left] = VariableZpLeftNode(eq_mul.left)
+                    
+                    right = vars_dict.get(eq_mul.right)
+                    if right is not None and isinstance(right, VariableZpNode):
+                        if isinstance(right, VariableZpLeftNode):
+                            raise TypeException('ZpLeft in right position')
+                        if isinstance(right, VariableZpRightNode):
+                            continue
+                        vars_dict[eq_mul.right] = VariableZpRightNode(eq_mul.right)
 
     def type_check(self):
         vars_dict = {v.name:v for v in self.vars}
         consts_dict = {c.name:c for c in self.consts}
         self.assign_eqs_type(consts_dict)
+        self.assign_vars_zp(vars_dict)
         X = [v for v in vars_dict.values() if isinstance(v, VariableG1Node)]
         Y = [v for v in vars_dict.values() if isinstance(v, VariableG2Node)]
         x = [v for v in vars_dict.values() if isinstance(v, VariableZpLeftNode)]
@@ -314,6 +361,7 @@ class GSNode(abc.ABC):
         for eq in self.eqs:
             eq.type_check(vars_dict, consts_dict)
             eq.compute_constants(X, Y, x, y, consts_dict)
+        
         self.X = X
         self.Y = Y
         self.x = x
@@ -335,8 +383,17 @@ eqs = equations()
 const = {{}}
 """
         script = prelude
-        for var in self.vars:
+        #for var in self.vars:
+        #    script += var.compile_proof(target)
+        for var in self.X:
             script += var.compile_proof(target)
+        for var in self.y:
+            script += var.compile_proof(target)
+        for var in self.x:
+            script += var.compile_proof(target)
+        for var in self.y:
+            script += var.compile_proof(target)
+        
         for const in self.consts:
             script += const.compile_proof(target)
         for eq in self.eqs:
