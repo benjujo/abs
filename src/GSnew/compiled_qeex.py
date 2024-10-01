@@ -11,16 +11,16 @@ y = []
 eqs = equations()
 const = {}
 
-sigma = load_element('sigma', 1)
-X.append(('sigma', sigma))
+z = load_element('z', 0)
+x.append(('z', z))
 
-pkg = load_element('pkg', 2)
-const['pkg'] = pkg
+a = load_element('a', 0)
+const['a'] = a
 
-t = load_element('t', 3)
+t = load_element('t', 0)
 const['t'] = t
 
-eq = Equation([], [pkg], [[]], t, 3)
+eq = Equation([], [a], [[]], t, 0)
 eqs.append(eq)
 variables = vars_array(X,Y,x,y)
 p=proof(CRS, eqs, variables)
