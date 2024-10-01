@@ -36,4 +36,15 @@ p=r.compile_proof(None)
 
 with open('compiled_bls.py', 'w') as f:
     f.write(p)
+    
 
+with open("qeex.gs", "r") as f:
+    p=parser.parse(f.read())
+t=ASTTransformer()
+r=t.transform(p)
+
+r.type_check()
+p=r.compile_proof(None)
+
+with open('compiled_qeex.py', 'w') as f:
+    f.write(p)
