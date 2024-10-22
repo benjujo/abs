@@ -136,6 +136,21 @@ class NamedArray(np.ndarray):
             super().__setitem__(index, value)
         else:
             super().__setitem__(key, value)
+            
+    def __json__(self):
+        # Create a list of dicts with 'name' and 'value'
+        return [{'name': name, 'value': value} for name, value in zip(self.names, self.tolist())]
+
+    # Optional: Define a custom JSON encoder to handle NamedArray objects
+    class NamedArrayEncoder(json.JSONEncoder):
+        def default(self, obj):
+            if isinstance(obj, NamedArray):
+                return obj.__json__()
+            if isinstance(obj, Element):
+                return obj.__json__()
+            if isinstance(obj, np.ndarray):
+                return obj.tolist()
+            return super().default(obj)
     
 class vars_array():
     def __init__(self, X, Y, x, y):
@@ -250,14 +265,28 @@ class Proof():
         self.thetas = thetas
 
     def to_json(self):
-        return {
+        return json.dumps({
             'c': self.c,
             'c_prime': self.c_prime,
             'd': self.d,
             'd_prime': self.d_prime,
             'pis': self.pis,
             'thetas': self.thetas
-        }
+        }, cls=NamedArray.NamedArrayEncoder)
+        
+    @classmethod
+    def from_json(cls, json_string):
+        data = json.loads(json_string)
+        
+        c = data['c']
+        c_prime = data['c_prime']
+        d = data['d']
+        d_prime = data['d_prime']
+
+        pis = np.array(data['pis'])
+        thetas = np.array(data['thetas'])
+
+        return cls(c, c_prime, d, d_prime, pis, thetas)
 
 
 
@@ -274,16 +303,27 @@ def proof(crs: CRS, eqs: equations, variables: vars_array):
     
     R = np.array([[ZpElement.random() for _ in range(2)] for _ in range(m)]) # shape (m, 2) of Zp
     r = np.array([ZpElement.random() for _ in range(m_prime)]) # shape (m,) of Zp
+    
+    names_X = X.names
+    names_x = x.names
+    names_Y = Y.names
+    names_y = y.names
 
-    #breakpoint()
-    c = np.array(list(map(crs.iota_1, X)), dtype=G1Element) + R@crs.u if len(X) > 0 else None
-    c_prime = np.array(list(map(crs.iota_prime_1, x)), dtype=G1Element) + r@crs.u1 if len(x) > 0 else None
+    data_c = np.array(list(map(crs.iota_1, X)), dtype=G1Element) + R@crs.u if len(X) > 0 else []
+    c = NamedArray(list(zip(names_X, data_c)))
+    
+    data_c_prime = np.array(list(map(crs.iota_prime_1, x)), dtype=G1Element) + r@crs.u1 if len(x) > 0 else []
+    c_prime = NamedArray(list(zip(names_x, data_c_prime)))
+
 
     S = np.array([[ZpElement.random() for _ in range(2)] for _ in range(n)]) # shape (m, 2) of Zp
     s = np.array([ZpElement.random() for _ in range(n_prime)]) # shape (m,) of Zp
 
-    d = np.array(list(map(crs.iota_2, Y)), dtype=G2Element) + S@crs.v if len(Y) > 0 else None
-    d_prime = np.array(list(map(crs.iota_prime_2, y)), dtype=G2Element) + s@crs.v1 if len(y) > 0 else None
+    data_d = np.array(list(map(crs.iota_2, Y)), dtype=G2Element) + S@crs.v if len(Y) > 0 else []
+    d = NamedArray(list(zip(names_Y, data_d)))
+    
+    data_d_prime = np.array(list(map(crs.iota_prime_2, y)), dtype=G2Element) + s@crs.v1 if len(y) > 0 else []
+    d_prime = NamedArray(list(zip(names_y, data_d_prime)))
     
     pis = []
     thetas = []
@@ -332,6 +372,12 @@ def proof(crs: CRS, eqs: equations, variables: vars_array):
         Gamma = eq.Gamma
 
         T = random_zp(2,1)
+        if len(x) == 0:
+            pi = np.array([G2Element.zero()])
+            theta = S.T @ np.array(list(map(crs.iota_1, a)))
+        elif len(Y) == 0:
+            pi = r.T @ np.array(list(map(crs.iota_2, B)))
+            theta = np.array([G1Element.zero()])
         pi = r.T * crs.iota_2(B) + r.T * Gamma * crs.iota_2(Y) + (r.T * Gamma * S - T.T) * crs.v
         theta = S.T * crs.iota_prime_1(a) + S.T * Gamma.T * crs.iota_prime_1(x) + T * crs.u1
 
@@ -357,7 +403,7 @@ def proof(crs: CRS, eqs: equations, variables: vars_array):
         pis.append(pi)
         thetas.append(theta)
         
-    return c, c_prime, d, d_prime, pis, thetas
+    return Proof(c, c_prime, d, d_prime, pis, thetas)
 
 
 def verify(crs: CRS, eqs: equations, proof: dict):
