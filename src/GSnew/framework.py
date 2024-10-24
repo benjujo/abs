@@ -277,14 +277,14 @@ class Proof():
     @classmethod
     def from_json(cls, json_string):
         data = json.loads(json_string)
-        
-        c = data['c']
-        c_prime = data['c_prime']
-        d = data['d']
-        d_prime = data['d_prime']
+        c = NamedArray([(com['name'], [Element.from_json(com['value'][0]), Element.from_json(com['value'][1])]) for com in data['c']])
+        c_prime = NamedArray([(com['name'], [Element.from_json(com['value'][0]), Element.from_json(com['value'][1])]) for com in data['c_prime']])
+        d = NamedArray([(com['name'], [Element.from_json(com['value'][0]), Element.from_json(com['value'][1])]) for com in data['d']])
+        d_prime = NamedArray([(com['name'], [Element.from_json(com['value'][0]), Element.from_json(com['value'][1])]) for com in data['d_prime']])
 
-        pis = np.array(data['pis'])
-        thetas = np.array(data['thetas'])
+        breakpoint()
+        pis = [np.array([[Element.from_json(e) for e in b] for b in pi]) for pi in data['pis']]
+        thetas = [np.array([[Element.from_json(e) for e in b] for b in theta]) for theta in data['thetas']]
 
         return cls(c, c_prime, d, d_prime, pis, thetas)
 
@@ -335,11 +335,11 @@ def proof(crs: CRS, eqs: equations, variables: vars_array):
 
         T = random_zp(2,2)
         if len(X) == 0:
-            pi = np.array([G2Element.zero(), G2Element.zero()])
+            pi = np.array([[G2Element.zero(), G2Element.zero()]])
             theta = S.T @ np.array(list(map(crs.iota_1, A)))
         elif len(Y) == 0:
             pi = R.T @ np.array(list(map(crs.iota_2, B)))
-            theta = np.array([G1Element.zero(), G1Element.zero()])
+            theta = np.array([[G1Element.zero(), G1Element.zero()]])
         else:
             pi = R.T @ np.array(list(map(crs.iota_2, B))) + R.T @ Gamma @ G2ElementArray(list(map(crs.iota_2 ,Y)), dtype=G2Element) + (R.T @ Gamma @ S - T.T) @ crs.v
             theta = S.T @ np.array(list(map(crs.iota_1, A))) + S.T @ Gamma.T @ np.array(list(map(crs.iota_1, X))) + T @ crs.u
@@ -354,7 +354,7 @@ def proof(crs: CRS, eqs: equations, variables: vars_array):
 
         T = random_zp(1,2)
         if len(X) == 0:
-            pi = np.array([G2Element.zero(), G2Element.zero()])
+            pi = np.array([[G2Element.zero(), G2Element.zero()]])
             theta = S.T @ np.array(list(map(crs.iota_1, A)))
         elif len(y) == 0:
             pi = R.T @ np.array(list(map(crs.iota_2, B)))
@@ -373,11 +373,11 @@ def proof(crs: CRS, eqs: equations, variables: vars_array):
 
         T = random_zp(2,1)
         if len(x) == 0:
-            pi = np.array([G2Element.zero()])
+            pi = np.array([G2Element.zero(), G2Element.zero()])
             theta = S.T @ np.array(list(map(crs.iota_1, a)))
         elif len(Y) == 0:
             pi = r.T @ np.array(list(map(crs.iota_2, B)))
-            theta = np.array([G1Element.zero()])
+            theta = np.array([[G1Element.zero(), G1Element.zero()]])
         pi = r.T * crs.iota_2(B) + r.T * Gamma * crs.iota_2(Y) + (r.T * Gamma * S - T.T) * crs.v
         theta = S.T * crs.iota_prime_1(a) + S.T * Gamma.T * crs.iota_prime_1(x) + T * crs.u1
 
@@ -391,11 +391,11 @@ def proof(crs: CRS, eqs: equations, variables: vars_array):
 
         T = ZpElement.random()
         if len(x) == 0:
-            pi = np.array([G2Element.zero()])
+            pi = np.array([G2Element.zero(), G2Element.zero()])
             theta = s.T @ np.array(list(map(crs.iota_prime_1, a)))
         elif len(y) == 0:
             pi = r.T @ np.array(list(map(crs.iota_prime_2, b)))
-            theta = np.array([G1Element.zero()])
+            theta = np.array([G1Element.zero(), G1Element.zero()])
         else:
             pi = r.T @ crs.iota_prime_2(b) + r.T @ Gamma @ crs.iota_prime_2(y) + (r.T @ Gamma @ s - T) @ crs.v1
             theta = s.T @ crs.iota_prime_1(a) + s.T @ Gamma.T @ crs.iota_prime_1(x) + T @ crs.u1

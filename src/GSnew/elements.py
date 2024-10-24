@@ -38,7 +38,8 @@ class Element():
         return f"{self.group_element}"
 
     def __json__(self):
-        return group.serialize(self.group_element).decode('utf-8')
+        #return group.serialize(self.group_element).decode('utf-8')
+        return self.to_bytes().decode('utf-8')
 
     def to_bytes(self):
         return objectToBytes(self.group_element, group)
