@@ -35,7 +35,7 @@ class Element():
         return self.group_element == other.group_element
 
     def __repr__(self):
-        return f"{self.group_element}"
+        return f"{group.serialize(self.group_element)}"
 
     def __json__(self):
         #return group.serialize(self.group_element).decode('utf-8')
