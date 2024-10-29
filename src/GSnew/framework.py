@@ -139,7 +139,7 @@ class NamedArray(np.ndarray):
             
     def __json__(self):
         # Create a list of dicts with 'name' and 'value'
-        return [{'name': name, 'value': value} for name, value in zip(self.names, self.tolist())]
+        return {name: value for name, value in zip(self.names, self.tolist())}
 
     # Optional: Define a custom JSON encoder to handle NamedArray objects
     class NamedArrayEncoder(json.JSONEncoder):
@@ -265,11 +265,14 @@ class Proof():
         self.thetas = thetas
 
     def to_json(self):
+        def to_json_array(array):
+            return np.array([[e.to_json() for e in b] for b in array])
+         
         return json.dumps({
-            'c': self.c,
-            'c_prime': self.c_prime,
-            'd': self.d,
-            'd_prime': self.d_prime,
+            **self.c.__json__(),
+            **self.c_prime.__json__(),
+            **self.d.__json__(),
+            **self.d_prime.__json__(),
             'pis': self.pis,
             'thetas': self.thetas
         }, cls=NamedArray.NamedArrayEncoder)
@@ -335,11 +338,11 @@ def proof(crs: CRS, eqs: equations, variables: vars_array):
 
         T = random_zp(2,2)
         if len(X) == 0:
-            pi = np.array([[G2Element.zero(), G2Element.zero()]])
+            pi = np.array([[G2Element.zero(), G2Element.zero()], [G2Element.zero(), G2Element.zero()]])
             theta = S.T @ np.array(list(map(crs.iota_1, A)))
         elif len(Y) == 0:
             pi = R.T @ np.array(list(map(crs.iota_2, B)))
-            theta = np.array([[G1Element.zero(), G1Element.zero()]])
+            theta = np.array([[G1Element.zero(), G1Element.zero()], [G1Element.zero(), G1Element.zero()]])
         else:
             pi = R.T @ np.array(list(map(crs.iota_2, B))) + R.T @ Gamma @ G2ElementArray(list(map(crs.iota_2 ,Y)), dtype=G2Element) + (R.T @ Gamma @ S - T.T) @ crs.v
             theta = S.T @ np.array(list(map(crs.iota_1, A))) + S.T @ Gamma.T @ np.array(list(map(crs.iota_1, X))) + T @ crs.u
@@ -406,16 +409,46 @@ def proof(crs: CRS, eqs: equations, variables: vars_array):
     return Proof(c, c_prime, d, d_prime, pis, thetas)
 
 
-def verify(crs: CRS, eqs: equations, proof: dict):
-    c = proof['c']
-    c_prime = proof['c_prime']
-    d = proof['d']
-    d_prime = proof['d_prime']
-    pis = proof['pis']
-    thetas = proof['thetas']
+def b_pair(b1: np.ndarray, b2: np.ndarray):
+    return np.array([[b1[0].pair(b2[0]), b1[1].pair(b2[0])], [b1[0].pair(b2[1]), b1[1].pair(b2[1])]])
+    
+
+
+def verify(crs: CRS, eqs: equations, proof):
+    c = proof.c
+    c_prime = proof.c_prime
+    d = proof.d
+    d_prime = proof.d_prime
+    pis = proof.pis
+    thetas = proof.thetas
 
     for eq, pi, theta in zip(eqs, pis, thetas):
         if eq.etype == 3:
+            breakpoint()
+            lhs = np.array(list(map(
+                b_pair,
+                np.array(list(map(crs.iota_1, eq.a)), dtype=G1Element),
+                d
+            ))) + np.array(list(map(
+                b_pair,
+                c,
+                np.array(list(map(crs.iota_2, eq.b)), dtype=G2Element)
+            ))) + np.array(list(map(
+                b_pair,
+                c,
+                eqs.Gamma @ d
+            )))
+            
+            rhs = crs.iota_t(eq.t) + np.array(list(map(
+                b_pair,
+                crs.u,
+                pi
+            ))) + np.array(list(map(
+                b_pair,
+                theta,
+                crs.v
+            )))
+            
             if not np.allclose(crs.iota_1(eq.a) + crs.u @ theta, pi):
                 return False
         elif eq.etype == 1:
