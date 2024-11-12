@@ -7,6 +7,7 @@ from elements import (
     GTElement,
     g1,
     g2,)
+from utils import NamedArray
 
 import json
 
@@ -106,51 +107,6 @@ class Variable():
         self.element = element
         self.vtype = vtype
 
-
-class NamedArray(np.ndarray):
-    def __new__(cls, input_data):
-        # Extract the data, names, and element types from the input tuples
-        names = [item[0] for item in input_data]
-        data = [item[1] for item in input_data]
-        
-        # Create the ndarray
-        obj = np.asarray(data).view(cls)
-        # Store the names and element types as instance attributes
-        obj.names = names
-        return obj
-
-    def __array_finalize__(self, obj):
-        if obj is None: return
-        self.names = getattr(obj, 'names', None)
-
-    def __getitem__(self, key):
-        if isinstance(key, str):
-            index = self.names.index(key)
-            return super().__getitem__(index)
-        else:
-            return super().__getitem__(key)
-
-    def __setitem__(self, key, value):
-        if isinstance(key, str):
-            index = self.names.index(key)
-            super().__setitem__(index, value)
-        else:
-            super().__setitem__(key, value)
-            
-    def __json__(self):
-        # Create a list of dicts with 'name' and 'value'
-        return {name: value for name, value in zip(self.names, self.tolist())}
-
-    # Optional: Define a custom JSON encoder to handle NamedArray objects
-    class NamedArrayEncoder(json.JSONEncoder):
-        def default(self, obj):
-            if isinstance(obj, NamedArray):
-                return obj.__json__()
-            if isinstance(obj, Element):
-                return obj.__json__()
-            if isinstance(obj, np.ndarray):
-                return obj.tolist()
-            return super().default(obj)
     
 class vars_array():
     def __init__(self, X, Y, x, y):
