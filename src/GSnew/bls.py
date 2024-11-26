@@ -7,7 +7,8 @@ class BLS():
     def __init__(self, g2=None):
         if g2 is None:
             self.g2 = G2Element.random()
-        self.g2 = g2
+        else:
+            self.g2 = g2
 
     def keygen(self) -> Tuple[ZpElement, G2Element]:
         sk = ZpElement.random()

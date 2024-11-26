@@ -23,28 +23,3 @@ class GSParser:
     def parse(self, program_text: str):
         parsed = self.lark.parse(program_text)
         return parsed
-
-parser=GSParser()
-with open("bls.gs", "r") as f:
-    p=parser.parse(f.read())
-from ast_builder import ASTTransformer
-t=ASTTransformer()
-r=t.transform(p)
-
-r.type_check()
-p=r.compile_proof(None)
-
-with open('compiled_bls.py', 'w') as f:
-    f.write(p)
-    
-
-with open("qeex.gs", "r") as f:
-    p=parser.parse(f.read())
-t=ASTTransformer()
-r=t.transform(p)
-
-r.type_check()
-p=r.compile_proof(None)
-
-with open('compiled_qeex.py', 'w') as f:
-    f.write(p)

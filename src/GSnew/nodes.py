@@ -17,7 +17,7 @@ class ConstantNode(TypeNode):
         self.name = name
 
 class ConstantG1Node(ConstantNode):
-    def compile_proof(self, target):
+    def compile_proof(self, defs, target):
         const_name = self.name
         const_template = f"""
 {const_name} = load_element('{const_name}', 1)
@@ -27,7 +27,7 @@ const['{const_name}'] = {const_name}
 
 
 class ConstantG2Node(ConstantNode):
-    def compile_proof(self, target):
+    def compile_proof(self, defs, target):
         const_name = self.name
         const_template = f"""
 {const_name} = load_element('{const_name}', 2)
@@ -37,7 +37,7 @@ const['{const_name}'] = {const_name}
 
 
 class ConstantGTNode(ConstantNode):
-    def compile_proof(self, target):
+    def compile_proof(self, defs, target):
         const_name = self.name
         const_template = f"""
 {const_name} = load_element('{const_name}', 3)
@@ -47,7 +47,7 @@ const['{const_name}'] = {const_name}
 
 
 class ConstantZpNode(ConstantNode):
-    def compile_proof(self, target):
+    def compile_proof(self, defs, target):
         const_name = self.name
         const_template = f"""
 {const_name} = load_element('{const_name}', 0)
@@ -64,7 +64,7 @@ class VariableNode(TypeNode):
         self.name = name
 
     '''
-    def compile_proof(self, target):
+    def compile_proof(self, defs, target):
         var_template = """
 {var_name} = Variable(load_element({var_name}, element_type), var_type)
 vars['{var_name}'] = {var_name}
@@ -73,7 +73,7 @@ vars['{var_name}'] = {var_name}
 
 
 class VariableG1Node(VariableNode):
-    def compile_proof(self, target):
+    def compile_proof(self, defs, target):
         var_name = self.name
         var_template = f"""
 {var_name} = load_element('{var_name}', 1)
@@ -83,7 +83,7 @@ X.append(('{var_name}', {var_name}))
 
 
 class VariableG2Node(VariableNode):
-    def compile_proof(self, target):
+    def compile_proof(self, defs, target):
         var_name = self.name
         var_template = f"""
 {var_name} = load_element('{var_name}', 2)
@@ -97,7 +97,7 @@ class VariableZpNode(VariableNode):
 
 
 class VariableZpLeftNode(VariableZpNode):
-    def compile_proof(self, target):
+    def compile_proof(self, defs, target):
         var_name = self.name
         var_template = f"""
 {var_name} = load_element('{var_name}', 0)
@@ -107,7 +107,7 @@ x.append(('{var_name}', {var_name}))
 
 
 class VariableZpRightNode(VariableZpNode):
-    def compile_proof(self, target):
+    def compile_proof(self, defs, target):
         var_name = self.name
         var_template = f"""
 {var_name} = load_element('{var_name}', 0)
@@ -229,7 +229,7 @@ class PPEquationNode(EquationNode):
         self.g = g
         
             
-    def compile_proof(self, target):
+    def compile_proof(self, defs, target):
         eq_template = f"""
 eq = Equation([{', '.join(self.a)}], [{', '.join(self.b)}], [{'], ['.join(['[' + ', '.join(row) + ']' for row in self.g])}], {self.target}, 3)
 eqs.append(eq)
@@ -279,7 +279,7 @@ class QEquationNode(EquationNode):
         self.b = B
         self.g = g
         
-    def compile_proof(self, target):
+    def compile_proof(self, defs, target):
         eq_template = f"""
 eq = Equation([{', '.join(self.a)}], [{', '.join(self.b)}], [{'], ['.join(['[' + ', '.join(row) + ']' for row in self.g])}], {self.target}, 0)
 eqs.append(eq)
@@ -368,7 +368,7 @@ class GSNode(abc.ABC):
         self.y = y
         
 
-    def compile_proof(self, target):
+    def compile_proof(self, defs, target):
         prelude = f"""
 from framework import load_element, load_crs, vars_array, Equation, equations, proof
 
@@ -384,20 +384,20 @@ const = {{}}
 """
         script = prelude
         #for var in self.vars:
-        #    script += var.compile_proof(target)
+        #    script += var.compile_proof(defs, target)
         for var in self.X:
-            script += var.compile_proof(target)
+            script += var.compile_proof(defs, target)
         for var in self.y:
-            script += var.compile_proof(target)
+            script += var.compile_proof(defs, target)
         for var in self.x:
-            script += var.compile_proof(target)
+            script += var.compile_proof(defs, target)
         for var in self.y:
-            script += var.compile_proof(target)
+            script += var.compile_proof(defs, target)
         
         for const in self.consts:
-            script += const.compile_proof(target)
+            script += const.compile_proof(defs, target)
         for eq in self.eqs:
-            script += eq.compile_proof(target)
+            script += eq.compile_proof(defs, target)
             
         script += "variables = vars_array(X,Y,x,y)\n"
         script += "p=proof(CRS, eqs, variables)\n"
@@ -405,7 +405,7 @@ const = {{}}
 
 
 
-    def compile_verification(self, target):
+    def compile_verification(self, defs, target):
         prelude = f"""
 from framework import load_element, load_crs, vars_array, Equation, equations, proof
 
@@ -421,11 +421,11 @@ const = {{}}
 """
         script = prelude
         for var in self.vars:
-            script += var.compile_proof(target)
+            script += var.compile_proof(defs, target)
         for const in self.consts:
-            script += const.compile_proof(target)
+            script += const.compile_proof(defs, target)
         for eq in self.eqs:
-            script += eq.compile_proof(target)
+            script += eq.compile_proof(defs, target)
             
         script += "variables = vars_array(X,Y,x,y)\n"
         script += "p=proof(CRS, eqs, variables)\n"

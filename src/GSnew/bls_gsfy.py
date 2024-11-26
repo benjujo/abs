@@ -1,7 +1,7 @@
 from elements import ZpElement, G1Element, G2Element
 from typing import Tuple
 
-from gsfy import *
+from gsfy import gsfy
 
 debug = False 
 
@@ -9,7 +9,8 @@ class BLS():
     def __init__(self, g2=None):
         if g2 is None:
             self.g2 = G2Element.random()
-        self.g2 = g2
+        else:
+            self.g2 = g2
 
     def keygen(self) -> Tuple[ZpElement, G2Element]:
         sk = ZpElement.random()
@@ -22,11 +23,23 @@ class BLS():
 
         return sk * h
     
-    @gsfy()
+    @gsfy
     def verify(self, vk: G2Element, m: str, signature: G1Element) -> bool:
-        lhs = signature.pair(self.g2)
+        g2 = self.g2
+        lhs = signature.pair(g2)
         rhs = G1Element.hash_from_string(m).pair(vk)
-        # signature * g2 == hash(m) * vk
+        GS_STRING = """
+        variables:
+            signature: G1
+
+        constants:
+            g2: G2
+            rhs: GT
+
+        equations:
+            signature * g2 = rhs
+
+        """
         return lhs == rhs
     
     
