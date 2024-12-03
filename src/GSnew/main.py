@@ -3,6 +3,7 @@ from parser import GSParser
 from ast_builder import ASTTransformer
 from gsfy import gsfy
 import os
+import json
 
 
 def prove(args):
@@ -62,12 +63,14 @@ if __name__ == '__main__':
     INPUT_DEFAULT = os.environ.get("GS_INPUT", "prove.gs")
     DEFINITIONS_DEFAULT = os.environ.get("GS_DEFINITIONS", "prove.json")
     OUTPUT_DEFAULT = os.environ.get("GS_OUTPUT", "prove.py")
+    PROOF_OUTPUT_DEFAULT = os.environ.get("GS_PROOF_OUTPUT", "verify.json")
     
     # prove parser
     prove_parser = subparsers.add_parser('prove', help='Prove action')
     prove_parser.add_argument('-i', '--input', help='Input file (.gs)', default=INPUT_DEFAULT)
     prove_parser.add_argument('-d', '--definitions', help='Definitions file (.json)', default=DEFINITIONS_DEFAULT)
     prove_parser.add_argument('-o', '--output', help='Output file (.py)', default=OUTPUT_DEFAULT)
+    prove_parser.add_argument('-p', '--proof-output', help='Output definitions file (.json)', default=PROOF_OUTPUT_DEFAULT)
     prove_parser.add_argument('-f', '--forward', help='Forward mode', action='store_false')
     prove_parser.set_defaults(func=prove)
 

@@ -7,7 +7,7 @@ from elements import (
     GTElement,
     g1,
     g2,)
-from utils import NamedArray
+from utils import NamedArray, UnamedArray
 
 import json
 
@@ -107,13 +107,6 @@ class Variable():
         self.element = element
         self.vtype = vtype
 
-    
-class vars_array():
-    def __init__(self, X, Y, x, y):
-        self.X = NamedArray(X)
-        self.Y = NamedArray(Y)
-        self.x = NamedArray(x)
-        self.y = NamedArray(y)
 
 
 
@@ -125,42 +118,58 @@ class CRS():
         self._v2 = v2
         
     def iota_1(self, x: G1Element):
-        return np.array([G1Element.zero(), x])
+        return UnamedArray([G1Element.zero(), x])
         
     def iota_prime_1(self, x: ZpElement):
-        u = self.u2 + np.array([G1Element.zero(), g1])
+        u = self.u2 + UnamedArray([G1Element.zero(), g1])
         return x * u
         
     def iota_2(self, y: G2Element):
-        return np.array([G2Element.zero(), y])
+        return UnamedArray([G2Element.zero(), y])
         
     def iota_prime_2(self, y: ZpElement):
-        v = self.v2 + np.array([G2Element.zero(), g2])
+        v = self.v2 + UnamedArray([G2Element.zero(), g2])
         return y * v
+    
+    def iota_t(self, t: GTElement):
+        return UnamedArray([GTElement.zero(), GTElement.zero(), GTElement.zero(), t])
+    
+    def iota_t_hat(self, t: G2Element):
+        u = self.u2 + UnamedArray([G1Element.zero(), self.u1[0]])
+        return u.b_pair(self.iota_2(t))
+    
+    def iota_t_tilde(self, t: G1Element):
+        v = self.v2 + UnamedArray([G2Element.zero(), self.v1[0]])
+        return self.iota_1(t).b_pair(v)
+    
+    def iota_t_prime(self, t: ZpElement):
+        u = self.u2 + UnamedArray([G1Element.zero(), self.u1[0]])
+        v = self.v2 + UnamedArray([G2Element.zero(), self.v1[0]])
+        return u.b_pair(t * v)
 
     @property
     def u(self):
-        return np.array([self._u1, self._u2])
+        return UnamedArray([self._u1, self._u2])
 
     @property
     def v(self):
-        return np.array([self._v1, self._v2])
+        return UnamedArray([self._v1, self._v2])
     
     @property
     def u1(self):
-        return np.array([self._u1])
+        return UnamedArray([self._u1])
     
     @property
     def u2(self):
-        return np.array([self._u2])
+        return UnamedArray([self._u2])
     
     @property
     def v1(self):
-        return np.array([self._v1])
+        return UnamedArray([self._v1])
     
     @property
     def v2(self):
-        return np.array([self._v2])
+        return UnamedArray([self._v2])
 
     @staticmethod
     def from_json(json_string):
@@ -249,12 +258,7 @@ class Proof():
 
 
 
-def proof(crs: CRS, eqs: equations, variables: vars_array):
-    X = variables.X
-    Y = variables.Y
-    x = variables.x
-    y = variables.y
-    
+def proof(crs: CRS, eqs: equations, X, Y, x, y):
     m = len(X)
     m_prime = len(x)
     n = len(Y)
@@ -263,26 +267,26 @@ def proof(crs: CRS, eqs: equations, variables: vars_array):
     R = np.array([[ZpElement.random() for _ in range(2)] for _ in range(m)]) # shape (m, 2) of Zp
     r = np.array([ZpElement.random() for _ in range(m_prime)]) # shape (m,) of Zp
     
-    names_X = X.names
-    names_x = x.names
-    names_Y = Y.names
-    names_y = y.names
 
-    data_c = np.array(list(map(crs.iota_1, X)), dtype=G1Element) + R@crs.u if len(X) > 0 else []
-    c = NamedArray(list(zip(names_X, data_c)))
+    #data_c = np.array(list(map(crs.iota_1, X)), dtype=G1Element) + R@crs.u if len(X) > 0 else []
+    #c = NamedArray(list(zip(names_X, data_c)))
+    c = X.iota_1(crs) + R@crs.u if len(X) > 0 else NamedArray([])
     
-    data_c_prime = np.array(list(map(crs.iota_prime_1, x)), dtype=G1Element) + r@crs.u1 if len(x) > 0 else []
-    c_prime = NamedArray(list(zip(names_x, data_c_prime)))
+    #data_c_prime = np.array(list(map(crs.iota_prime_1, x)), dtype=G1Element) + r@crs.u1 if len(x) > 0 else []
+    #c_prime = NamedArray(list(zip(names_x, data_c_prime)))
+    c_prime = x.iota_prime_1(crs) + r@crs.u1 if len(x) > 0 else NamedArray([])
 
 
     S = np.array([[ZpElement.random() for _ in range(2)] for _ in range(n)]) # shape (m, 2) of Zp
     s = np.array([ZpElement.random() for _ in range(n_prime)]) # shape (m,) of Zp
 
-    data_d = np.array(list(map(crs.iota_2, Y)), dtype=G2Element) + S@crs.v if len(Y) > 0 else []
-    d = NamedArray(list(zip(names_Y, data_d)))
+    #data_d = np.array(list(map(crs.iota_2, Y)), dtype=G2Element) + S@crs.v if len(Y) > 0 else []
+    #d = NamedArray(list(zip(names_Y, data_d)))
+    d = Y.iota_2(crs) + S@crs.v if len(Y) > 0 else NamedArray([])
     
-    data_d_prime = np.array(list(map(crs.iota_prime_2, y)), dtype=G2Element) + s@crs.v1 if len(y) > 0 else []
-    d_prime = NamedArray(list(zip(names_y, data_d_prime)))
+    #data_d_prime = np.array(list(map(crs.iota_prime_2, y)), dtype=G2Element) + s@crs.v1 if len(y) > 0 else []
+    #d_prime = NamedArray(list(zip(names_y, data_d_prime)))
+    d_prime = y.iota_prime_2(crs) + s@crs.v1 if len(y) > 0 else NamedArray([])
     
     pis = []
     thetas = []
@@ -303,8 +307,8 @@ def proof(crs: CRS, eqs: equations, variables: vars_array):
             pi = R.T @ np.array(list(map(crs.iota_2, B))) + R.T @ Gamma @ G2ElementArray(list(map(crs.iota_2 ,Y)), dtype=G2Element) + (R.T @ Gamma @ S - T.T) @ crs.v
             theta = S.T @ np.array(list(map(crs.iota_1, A))) + S.T @ Gamma.T @ np.array(list(map(crs.iota_1, X))) + T @ crs.u
         
-        pis.append(pi)
-        thetas.append(theta)
+        pis.append(UnamedArray(pi))
+        thetas.append(UnamedArray(theta))
         
     for eq in eqs.ms1:
         A = eq.A
@@ -322,8 +326,8 @@ def proof(crs: CRS, eqs: equations, variables: vars_array):
             pi = R.T @ crs.iota_prime_2(b) + R.T @ Gamma @ crs.iota_prime_2(y) + (R.T @ Gamma @ s - T.T) @ crs.v1
             theta = s.T @ crs.iota_1(A) + s.T @ Gamma.T @ crs.iota_1(X) + T @ crs.u
 
-        pis.append(pi)
-        thetas.append(theta)
+        pis.append(UnamedArray(pi))
+        thetas.append(UnamedArray(theta))
         
     for eq in eqs.ms2:
         a = eq.a
@@ -340,8 +344,8 @@ def proof(crs: CRS, eqs: equations, variables: vars_array):
         pi = r.T * crs.iota_2(B) + r.T * Gamma * crs.iota_2(Y) + (r.T * Gamma * S - T.T) * crs.v
         theta = S.T * crs.iota_prime_1(a) + S.T * Gamma.T * crs.iota_prime_1(x) + T * crs.u1
 
-        pis.append(pi)
-        thetas.append(theta)
+        pis.append(UnamedArray(pi))
+        thetas.append(UnamedArray(theta))
         
     for eq in eqs.qe:
         a = eq.a
@@ -354,13 +358,13 @@ def proof(crs: CRS, eqs: equations, variables: vars_array):
             theta = s.T @ np.array(list(map(crs.iota_prime_1, a)))
         elif len(y) == 0:
             pi = r.T @ np.array(list(map(crs.iota_prime_2, b)))
-            theta = np.array([G1Element.zero(), G1Element.zero()])
+            theta = np.array([[G1Element.zero(), G1Element.zero()]])
         else:
             pi = r.T @ crs.iota_prime_2(b) + r.T @ Gamma @ crs.iota_prime_2(y) + (r.T @ Gamma @ s - T) @ crs.v1
             theta = s.T @ crs.iota_prime_1(a) + s.T @ Gamma.T @ crs.iota_prime_1(x) + T @ crs.u1
         
-        pis.append(pi)
-        thetas.append(theta)
+        pis.append(UnamedArray(pi))
+        thetas.append(UnamedArray(theta))
         
     return Proof(c, c_prime, d, d_prime, pis, thetas)
 
@@ -370,50 +374,31 @@ def b_pair(b1: np.ndarray, b2: np.ndarray):
     
 
 
-def verify(crs: CRS, eqs: equations, proof):
-    c = proof.c
-    c_prime = proof.c_prime
-    d = proof.d
-    d_prime = proof.d_prime
-    pis = proof.pis
-    thetas = proof.thetas
+def verify(crs: CRS, eqs: equations, c, c_prime, d, d_prime, pis, thetas):
 
     for eq, pi, theta in zip(eqs, pis, thetas):
+        a = UnamedArray(eq.a)
+        b = UnamedArray(eq.b)
+        Gamma = UnamedArray(eq.Gamma)
+        t = eq.t
+        
         if eq.etype == 3:
+            lhs = (a.iota_1(crs)).b_pair(d) * c.b_pair(b.iota_2(crs)) * c.b_pair(Gamma @ d)
+            rhs = crs.iota_t(t) * crs.u.b_pair(pi) * theta.b_pair(crs.v)
             breakpoint()
-            lhs = np.array(list(map(
-                b_pair,
-                np.array(list(map(crs.iota_1, eq.a)), dtype=G1Element),
-                d
-            ))) + np.array(list(map(
-                b_pair,
-                c,
-                np.array(list(map(crs.iota_2, eq.b)), dtype=G2Element)
-            ))) + np.array(list(map(
-                b_pair,
-                c,
-                eqs.Gamma @ d
-            )))
-            
-            rhs = crs.iota_t(eq.t) + np.array(list(map(
-                b_pair,
-                crs.u,
-                pi
-            ))) + np.array(list(map(
-                b_pair,
-                theta,
-                crs.v
-            )))
-            
-            if not np.allclose(crs.iota_1(eq.a) + crs.u @ theta, pi):
-                return False
+            if not np.all(lhs == rhs): return False
+        
         elif eq.etype == 1:
-            if not np.allclose(crs.iota_1(eq.A) + crs.u @ theta, pi):
-                return False
+            lhs = (a.iota_1(crs)).b_pair(d_prime) * c.b_pair(b.iota_prime_2(crs)) * c.b_pair(Gamma @ d_prime)
+            rhs = crs.iota_t_tilde(t) * crs.u.b_pair(pi) * theta.b_pair(crs.v1)
+            if not np.all(lhs == rhs): return False
         elif eq.etype == 2:
-            if not np.allclose(crs.iota_2(eq.B) + crs.v @ theta, pi):
-                return False
+            lhs = (a.iota_prime_1(crs)).b_pair(d) * c_prime.b_pair(b.iota_2(crs)) * c_prime.b_pair(Gamma @ d)
+            rhs = crs.iota_t_hat(t) * crs.u1.b_pair(pi) * theta.b_pair(crs.v)
+            if not np.all(lhs == rhs): return False
         elif eq.etype == 0:
-            if not np.allclose(crs.iota_prime_1(eq.a) + crs.u1 @ theta, pi):
-                return False
+            breakpoint()
+            lhs = (a.iota_prime_1(crs)).b_pair(d_prime) * c_prime.b_pair(b.iota_prime_2(crs)) * c_prime.b_pair(Gamma @ d_prime)
+            rhs = crs.iota_t_prime(t) * crs.u1.b_pair(pi) * theta.b_pair(crs.v1)
+            if not np.all(lhs == rhs): return False
     return True

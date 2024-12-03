@@ -77,7 +77,15 @@ class VariableG1Node(VariableNode):
         var_name = self.name
         var_template = f"""
 {var_name} = load_element('{var_name}', 1)
-X.append(('{var_name}', {var_name}))
+X = X.append('{var_name}', {var_name})
+"""
+        return var_template
+    
+    def compile_verify(self, defs, target):
+        var_name = self.name
+        var_template = f"""
+{var_name} = load_element('{var_name}', 1)
+C = C.append('{var_name}', {var_name})
 """
         return var_template
 
@@ -87,7 +95,15 @@ class VariableG2Node(VariableNode):
         var_name = self.name
         var_template = f"""
 {var_name} = load_element('{var_name}', 2)
-Y.append(('{var_name}', {var_name}))
+Y = Y.append('{var_name}', {var_name})
+"""
+        return var_template
+    
+    def compile_verify(self, defs, target):
+        var_name = self.name
+        var_template = f"""
+{var_name} = load_element('{var_name}', 2)
+D = D.append('{var_name}', {var_name})
 """
         return var_template
 
@@ -101,7 +117,15 @@ class VariableZpLeftNode(VariableZpNode):
         var_name = self.name
         var_template = f"""
 {var_name} = load_element('{var_name}', 0)
-x.append(('{var_name}', {var_name}))
+x = x.append('{var_name}', {var_name})
+"""
+        return var_template
+    
+    def compile_verify(self, defs, target):
+        var_name = self.name
+        var_template = f"""
+{var_name} = load_element('{var_name}', 0)
+c = c.append('{var_name}', {var_name})
 """
         return var_template
 
@@ -111,7 +135,15 @@ class VariableZpRightNode(VariableZpNode):
         var_name = self.name
         var_template = f"""
 {var_name} = load_element('{var_name}', 0)
-y.append(('{var_name}', {var_name}))
+y = y.append('{var_name}', {var_name})
+"""
+        return var_template
+    
+    def compile_proof(self, defs, target):
+        var_name = self.name
+        var_template = f"""
+{var_name} = load_element('{var_name}', 0)
+d = d.append('{var_name}', {var_name})
 """
         return var_template
 
@@ -285,6 +317,13 @@ eq = Equation([{', '.join(self.a)}], [{', '.join(self.b)}], [{'], ['.join(['[' +
 eqs.append(eq)
 """
         return eq_template
+    
+    def compile_verify(self, defs, target):
+        eq_template = f"""
+eq = Equation([{', '.join(self.a)}], [{', '.join(self.b)}], [{'], ['.join(['[' + ', '.join(row) + ']' for row in self.g])}], {self.target}, 0)
+eqs.append(eq)
+"""
+        return eq_template
 
 
 class GSNode(abc.ABC):
@@ -370,14 +409,15 @@ class GSNode(abc.ABC):
 
     def compile_proof(self, defs, target):
         prelude = f"""
-from framework import load_element, load_crs, vars_array, Equation, equations, proof
+from framework import load_element, load_crs, Equation, equations, proof
+from utils import NamedArray
 
 CRS = load_crs()
 
-X = []
-Y = []
-x = []
-y = []
+X = NamedArray([])
+Y = NamedArray([])
+x = NamedArray([])
+y = NamedArray([])
 
 eqs = equations()
 const = {{}}
@@ -399,36 +439,34 @@ const = {{}}
         for eq in self.eqs:
             script += eq.compile_proof(defs, target)
             
-        script += "variables = vars_array(X,Y,x,y)\n"
-        script += "p=proof(CRS, eqs, variables)\n"
+        script += "p=proof(CRS, eqs, X, Y, x, y)\n"
         return script
 
 
 
     def compile_verification(self, defs, target):
         prelude = f"""
-from framework import load_element, load_crs, vars_array, Equation, equations, proof
+from framework import load_element, load_crs, Equation, equations, Proof, proof
 
 CRS = load_crs()
 
-C = []
-D = []
 c = []
 d = []
+c_prime = []
+d_prime = []
 
 eqs = equations()
 const = {{}}
 """
         script = prelude
         for var in self.vars:
-            script += var.compile_proof(defs, target)
+            script += var.compile_verify(defs, target)
         for const in self.consts:
-            script += const.compile_proof(defs, target)
+            script += const.compile_verify(defs, target)
         for eq in self.eqs:
-            script += eq.compile_proof(defs, target)
+            script += eq.compile_verify(defs, target)
             
-        script += "variables = vars_array(X,Y,x,y)\n"
-        script += "p=proof(CRS, eqs, variables)\n"
+        script += "v=verify(CRS, eqs, c, d, c_prime, d_prime, pis, thetas)\n"
         return script
 
 
