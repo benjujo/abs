@@ -1,18 +1,19 @@
 
-from framework import load_element, load_crs, vars_array, Equation, equations, proof
+from framework import load_element, load_crs, Equation, equations, proof
+from utils import NamedArray
 
 CRS = load_crs()
 
-X = []
-Y = []
-x = []
-y = []
+X = NamedArray([])
+Y = NamedArray([])
+x = NamedArray([])
+y = NamedArray([])
 
 eqs = equations()
 const = {}
 
 z = load_element('z', 0)
-x.append(('z', z))
+x = x.append('z', z)
 
 a = load_element('a', 0)
 const['a'] = a
@@ -22,5 +23,4 @@ const['t'] = t
 
 eq = Equation([], [a], [[]], t, 0)
 eqs.append(eq)
-variables = vars_array(X,Y,x,y)
-p=proof(CRS, eqs, variables)
+p=proof(CRS, eqs, X, Y, x, y)

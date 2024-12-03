@@ -1,18 +1,19 @@
 
-from framework import load_element, load_crs, vars_array, Equation, equations, proof
+from framework import load_element, load_crs, Equation, equations, proof
+from utils import NamedArray
 
 CRS = load_crs()
 
-X = []
-Y = []
-x = []
-y = []
+X = NamedArray([])
+Y = NamedArray([])
+x = NamedArray([])
+y = NamedArray([])
 
 eqs = equations()
 const = {}
 
 sigma = load_element('sigma', 1)
-X.append(('sigma', sigma))
+X = X.append('sigma', sigma)
 
 pkg = load_element('pkg', 2)
 const['pkg'] = pkg
@@ -22,5 +23,4 @@ const['t'] = t
 
 eq = Equation([], [pkg], [[]], t, 3)
 eqs.append(eq)
-variables = vars_array(X,Y,x,y)
-p=proof(CRS, eqs, variables)
+p=proof(CRS, eqs, X, Y, x, y)
