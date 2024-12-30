@@ -20,6 +20,9 @@ def load_crs(new=None, filename='crs.json'):
             raise Exception('CRS not valid')
     return crs
 
+def random_zp(a,b):
+    return np.array([[ZpElement.random() for _ in range(b)] for _ in range(a)])
+
 class CRS():
     def __init__(self, u1, u2, v1, v2, trapdoor=None):
         self._u1 = u1
@@ -223,6 +226,7 @@ class NamedArray(np.ndarray):
         return NamedArray([(n, v) for n, v in zip(self.names, new_array)])
     
     def b_pair(self, other):
+        print(self.shape, other.shape)
         if self.shape[0] != other.shape[0]:
             raise ValueError("Shapes are not aligned for matrix operation")
         if self.size == 0 or other.size == 0:
@@ -262,6 +266,7 @@ class UnamedArray(np.ndarray):
         super().__setitem__(key, value)
             
     def iota_1(self, crs):
+        breakpoint()
         return UnamedArray([crs.iota_1(element) for element in self])
             
     def iota_prime_1(self, crs):
@@ -301,6 +306,12 @@ class UnamedArray(np.ndarray):
             raise ValueError("Shapes are not aligned for matrix operation")
         if self.size == 0 or other.size == 0:
             return UnamedArray(np.empty((0, 4), dtype=object))
+        if len(self.shape) == 1 and len(other.shape) == 1:
+            gt_array = np.array([np.array([self[0].pair(other[0]),
+                                 self[0].pair(other[1]),
+                                 self[1].pair(other[0]),
+                                 self[1].pair(other[1])])])
+            return UnamedArray(np.prod(gt_array,0))
         if self.shape[1] != 2 or other.shape[1] != 2:
             raise ValueError("Invalid dimensions for b_pair")
         gt_array = np.array([np.array([l[0].pair(r[0]),

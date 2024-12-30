@@ -3,7 +3,9 @@ from charm.core.engine.util import objectToBytes, bytesToObject
 
 
 group = PairingGroup('BN254')
-     
+
+def load_element(name, group_type):
+    return ELEMENT_DICT[group_type].from_json(name)
 
 class Element():
     """ Element is a wrapper of elements of Zp, G1, G2 & GT

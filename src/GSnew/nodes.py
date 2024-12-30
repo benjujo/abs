@@ -13,139 +13,108 @@ class TypeNode(abc.ABC):
 # ------ Constants ------
 
 class ConstantNode(TypeNode):
-    def __init__(self, name: str):
+    def __init__(self, name: str, etype: int):
         self.name = name
-
-class ConstantG1Node(ConstantNode):
-    def compile_proof(self, defs, target):
+        self.etype = etype
+        
+    def _compile(self, defs, target):
         const_name = self.name
+        raw_element = defs[const_name]
+        
         const_template = f"""
-{const_name} = load_element('{const_name}', 1)
+{const_name} = elements.load_element('{raw_element}', {self.etype})
 const['{const_name}'] = {const_name}
 """
         return const_template
+    
+    def compile_proof(self, defs, target):
+        return self._compile(defs, target)
+    
+    def compile_verify(self, defs, target):
+        return self._compile(defs, target)
+
+class ConstantG1Node(ConstantNode):
+    def __init__(self, name: str):
+        super().__init__(name, 1)
 
 
 class ConstantG2Node(ConstantNode):
-    def compile_proof(self, defs, target):
-        const_name = self.name
-        const_template = f"""
-{const_name} = load_element('{const_name}', 2)
-const['{const_name}'] = {const_name}
-"""
-        return const_template
+    def __init__(self, name: str):
+        super().__init__(name, 2)
 
 
 class ConstantGTNode(ConstantNode):
-    def compile_proof(self, defs, target):
-        const_name = self.name
-        const_template = f"""
-{const_name} = load_element('{const_name}', 3)
-const['{const_name}'] = {const_name}
-"""
-        return const_template
+    def __init__(self, name: str):
+        super().__init__(name, 3)
 
 
 class ConstantZpNode(ConstantNode):
-    def compile_proof(self, defs, target):
-        const_name = self.name
-        const_template = f"""
-{const_name} = load_element('{const_name}', 0)
-const['{const_name}'] = {const_name}
-"""
-        return const_template
+    def __init__(self, name: str):
+        super().__init__(name, 0)
 
 
 # ------ Variables ------
 # , position: int=None
 
 class VariableNode(TypeNode):
-    def __init__(self, name: str):
+    # VTYPE: (ETYPE, VariableArray, CommitmentArray)
+    VTYPES = {
+        1: (1, "X", "C"),
+        2: (2, "Y", "D"),
+        -1: (0, "x", "c"),
+        0: (0, "y", "d")
+    }
+    def __init__(self, name: str, vtype: int):
         self.name = name
+        self.vtype = vtype
 
-    '''
+    
     def compile_proof(self, defs, target):
-        var_template = """
-{var_name} = Variable(load_element({var_name}, element_type), var_type)
-vars['{var_name}'] = {var_name}
+        var_name = self.name
+        vtype_tuple = VariableNode.VTYPES[self.vtype]
+        raw_element = defs[var_name]
+        
+        var_template = f"""
+{var_name} = elements.load_element('{raw_element}', {vtype_tuple[0]})
+{vtype_tuple[1]} = {vtype_tuple[1]}.append('{var_name}', {var_name})
 """
-    '''
+        return var_template
+    
+    def compile_verify(self, defs, target):
+        var_name = self.name
+        vtype_tuple = VariableNode.VTYPES[self.vtype]
+        raw_element = defs[var_name]
+        
+        var_template = f"""
+{var_name} = elements.load_element('{raw_element}', {vtype_tuple[0]})
+{vtype_tuple[2]} = {vtype_tuple[2]}.append('{var_name}', {var_name})
+"""
+        return var_template
 
 
 class VariableG1Node(VariableNode):
-    def compile_proof(self, defs, target):
-        var_name = self.name
-        var_template = f"""
-{var_name} = load_element('{var_name}', 1)
-X = X.append('{var_name}', {var_name})
-"""
-        return var_template
-    
-    def compile_verify(self, defs, target):
-        var_name = self.name
-        var_template = f"""
-{var_name} = load_element('{var_name}', 1)
-C = C.append('{var_name}', {var_name})
-"""
-        return var_template
+    def __init__(self, name: str):
+        super().__init__(name, 1)
 
 
 class VariableG2Node(VariableNode):
-    def compile_proof(self, defs, target):
-        var_name = self.name
-        var_template = f"""
-{var_name} = load_element('{var_name}', 2)
-Y = Y.append('{var_name}', {var_name})
-"""
-        return var_template
-    
-    def compile_verify(self, defs, target):
-        var_name = self.name
-        var_template = f"""
-{var_name} = load_element('{var_name}', 2)
-D = D.append('{var_name}', {var_name})
-"""
-        return var_template
+    def __init__(self, name: str):
+        super().__init__(name, 2)
 
 
 class VariableZpNode(VariableNode):
-    _valid = False
-
+    def __init__(self, name: str, vtype: int = None):
+        super().__init__(name, vtype)
+        
 
 class VariableZpLeftNode(VariableZpNode):
-    def compile_proof(self, defs, target):
-        var_name = self.name
-        var_template = f"""
-{var_name} = load_element('{var_name}', 0)
-x = x.append('{var_name}', {var_name})
-"""
-        return var_template
-    
-    def compile_verify(self, defs, target):
-        var_name = self.name
-        var_template = f"""
-{var_name} = load_element('{var_name}', 0)
-c = c.append('{var_name}', {var_name})
-"""
-        return var_template
+    def __init__(self, name: str):
+        super().__init__(name, -1)
 
 
 class VariableZpRightNode(VariableZpNode):
-    def compile_proof(self, defs, target):
-        var_name = self.name
-        var_template = f"""
-{var_name} = load_element('{var_name}', 0)
-y = y.append('{var_name}', {var_name})
-"""
-        return var_template
-    
-    def compile_proof(self, defs, target):
-        var_name = self.name
-        var_template = f"""
-{var_name} = load_element('{var_name}', 0)
-d = d.append('{var_name}', {var_name})
-"""
-        return var_template
+    def __init__(self, name: str):
+        super().__init__(name, 0)
 
 
 # ------ Mul expressions ------
@@ -166,6 +135,7 @@ class MulPPENode(MulNode):
                 raise TypeError('gamma is not a ZpConstant')
             if not (isinstance(left, VariableG1Node) and isinstance(right, VariableG2Node)):
                 raise TypeError('Not VV')
+            return
         if not (isinstance(left, VariableG1Node) and isinstance(right, ConstantG2Node)) or \
         (isinstance(left, ConstantG1Node) and isinstance(right, VariableG2Node)):
             raise TypeError('Neither CV or VC')
@@ -181,6 +151,7 @@ class MulMS1Node(MulNode):
                 raise TypeError('gamma is not a ZpConstant')
             if not (isinstance(left, VariableZpNode) and isinstance(right, VariableG1Node)):
                 raise TypeError('Not VV')
+            return
         if not (isinstance(left, VariableZpNode) and isinstance(right, ConstantG1Node)) or \
         (isinstance(left, ConstantZpNode) and isinstance(right, VariableG1Node)):
             raise TypeError('Neither CV or VC')
@@ -196,6 +167,7 @@ class MulMS2Node(MulNode):
                 raise TypeError('gamma is not a ZpConstant')
             if not (isinstance(left, VariableZpNode) and isinstance(right, VariableG2Node)):
                 raise TypeError('Not VV')
+            return
         if not (isinstance(left, VariableZpNode) and isinstance(right, ConstantG2Node)) or \
         (isinstance(left, ConstantZpNode) and isinstance(right, VariableG2Node)):
             raise TypeError('Neither CV or VC')
@@ -211,6 +183,7 @@ class MulQENode(MulNode):
                 raise TypeError('gamma is not a ZpConstant')
             if not (isinstance(left, VariableZpNode) and isinstance(right, VariableG1Node)):
                 raise TypeError('Not VV')
+            return
         if not (isinstance(left, VariableZpNode) and isinstance(right, ConstantZpNode)) or \
         (isinstance(left, ConstantZpNode) and isinstance(right, VariableZpNode)):
             raise TypeError('Neither CV or VC')
@@ -242,20 +215,17 @@ class PPEquationNode(EquationNode):
         B = [0] * m
         g = [[0] * n] * m
         for i,var in enumerate(X):
-            # find the eq_mul that has var as left
-            eq_mul = next((eq_mul for eq_mul in self if eq_mul.left == var.name), None)
-            if eq_mul:
-                B[i] = eq_mul.right
+            # find the eq_mul that has var as left and no gamma
+            eq_mul = next((eq_mul for eq_mul in self if eq_mul.left == var.name and not eq_mul.gamma), None)
+            B[i] = eq_mul.right if eq_mul else "elements.G2Element.zero()"
         for j,var in enumerate(Y):
-            # find the eq_mul that has var as right
-            eq_mul = next((eq_mul for eq_mul in self if eq_mul.right == var.name), None)
-            if eq_mul:
-                A[j] = consts_dict[eq_mul.left]
+            # find the eq_mul that has var as right and not gamma
+            eq_mul = next((eq_mul for eq_mul in self if eq_mul.right == var.name and not eq_mul.gamma), None)
+            A[j] = eq_mul.left if eq_mul else "elements.G1Element.zero()"
         for i,xvar in enumerate(X):
             for j,yvar in enumerate(Y):
                 eq_mul = next((eq_mul for eq_mul in self if eq_mul.left == xvar.name and eq_mul.right == yvar.name), None)
-                if eq_mul:
-                    g[i][j] = consts_dict[eq_mul.gamma]
+                g[i][j] = eq_mul.gamma if eq_mul.gamma else "elements.ZpElement.zero()"
         self.a = A
         self.b = B
         self.g = g
@@ -407,12 +377,12 @@ class GSNode(abc.ABC):
         self.y = y
         
 
-    def compile_proof(self, defs, target):
-        prelude = f"""
-from framework import load_element, load_crs, Equation, equations, proof
+    def compile_proof(self, defs, crs_dict, target):
+        prelude = f"""from framework import CRS, Equation, equations, proof
 from utils import NamedArray
+import {target} as elements
 
-CRS = load_crs()
+crs = CRS.from_json({crs_dict})
 
 X = NamedArray([])
 Y = NamedArray([])
@@ -427,7 +397,7 @@ const = {{}}
         #    script += var.compile_proof(defs, target)
         for var in self.X:
             script += var.compile_proof(defs, target)
-        for var in self.y:
+        for var in self.Y:
             script += var.compile_proof(defs, target)
         for var in self.x:
             script += var.compile_proof(defs, target)
@@ -439,16 +409,15 @@ const = {{}}
         for eq in self.eqs:
             script += eq.compile_proof(defs, target)
             
-        script += "p=proof(CRS, eqs, X, Y, x, y)\n"
+        script += "p=proof(crs, eqs, X, Y, x, y)\n"
         return script
 
 
 
-    def compile_verification(self, defs, target):
-        prelude = f"""
-from framework import load_element, load_crs, Equation, equations, Proof, proof
+    def compile_verify(self, defs, crs_filename, target):
+        prelude = f"""from framework import load_element, CRS, Equation, equations, Proof, proof
 
-CRS = load_crs()
+crs = CRS({crs_filename})
 
 c = []
 d = []
@@ -466,7 +435,7 @@ const = {{}}
         for eq in self.eqs:
             script += eq.compile_verify(defs, target)
             
-        script += "v=verify(CRS, eqs, c, d, c_prime, d_prime, pis, thetas)\n"
+        script += "v=verify(crs, eqs, c, d, c_prime, d_prime, pis, thetas)\n"
         return script
 
 
