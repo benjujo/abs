@@ -151,6 +151,8 @@ class G1Element(Element):
     def pair(self, other):
         if not isinstance(other, G2Element):
             raise Exception('Not a G2 element')
+        if str(self) == "b'1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'":
+            return GTElement.zero()
         return GTElement(pair(self.group_element, other.group_element))
     
     @staticmethod

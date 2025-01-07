@@ -1,0 +1,46 @@
+from framework import CRS, Equation, equations, proof
+from utils import NamedArray
+import elements as elements
+
+crs = CRS.from_json({'u1': ['eJxNTTsOwjAMvYqVOUMcYjvlKghFBXXrFkBCiLvznGZgsPX8fv6E1u772ntr4Uzh9n5sPUQC+1r35zbYS1kiSY1kp0icCoA4wKpgKvuBVTMAQ1aZPgfiB6OBc3LaIi0A5gE7Os0FxgOdwwxF7D+cRgM+FARUMTb9MgUdtjyXW6wettGgcv3+AHQkMFg=', 'eJw9jc0OAiEMhF+l4cyBstAWX8UYspq97W3VxBjf3eFHDw2db6bD29V629fjqNWdyF1f9+1wnkCf6/7YOj2n4imbJ108cYAQCMGrCYYCMnsyuBo9lQ4EDsZkQG1X2NMyAp21YAyzBmMYRVNBvfEIZwSlBQMWK6O1HTDH+fFfJfvh2FrC9CVfPl9pfC9D'], 'u2': ['eJxFjsEKwyAQRH9FPHtwjbraXylB0pBbbqaFUvrvHXeFHmZlnrOOH9vafm69t2Zvxj7e19GtM6Cv7XweQu+xOpOKMxliiILH8ARK05WAqwVnBoTKMhOVYSBOUBwQ6RQUEJEaoqyxERdDXgbaRru0+rnF/H+WPG7j+FvV0ow1RgVXZaK0fn+M3C+R', 'eJw9jsEOAiEMRH+l4cyBYoHir5gNWc3e9oaaGOO/O4XVA6XzmE55u9Zu+9p7a+5M7vq6b915An2u+2Mb9CLVU1JPJXpizrNRMQHKIXjK1nA8isZJEl44omiBYNwJh80VDoFoPVkI4gSukkxgVkDVMmQ6xthw1fmB8gOp/HcDyfjJSBm5dS7Jefl8AUCGMBQ='], 'v1': ['eJxNUEEOAiEM/ArhzIEiUPArxpDV7G1vqybG+Hc7FDYeCEw7M53ysa3dt2XfW7NnY2/vx7pbZ6T6Wrbn2quX5J1JxZnMcidnWHAUnMgZ8kEAa7NKkU+jyFkeVICqtOUU0ZauES6PQk4HTUQpAJHyAKLYMXBEw2sACh4IahEWrzScctLBoMMC7nVMS6zRsQ55EVZ51KrRiWZuCj0D4mU15zJMZuPI0BeA2pP6wxur9jlR80Faqv4SEX7F5z/msfX0opkd0ej6/QEB91C5', 'eJxNkEsOwjAMRK8SZZ2F3ebjcBWEooK6Y1dAQoi740kciUUjZzJ+HvfjW7vdt+NozZ+cv74f++GDU/W13Z97V8+JgksSXK7ByRpcKcExsx6EigjXPN7gSQmqQF2Ci1pUdHdBn5JaCywML40eJrVKNBIvShcUvFrXMKxzHvApT0WPqFFKH1FGwjI5IyoYBQgeQ5k6VE0ZGJmZulcMigkdTLZMLYaCmtiWqWO7nP/jdxSWh60aJKOtr6SrCo1IiC0LRkaLTTx/hvpzso8v3x/NCVLD'], 'v2': ['eJw9UEEOAiEM/ArZMwdYKQW/YsxGzd72tmpijH93pkUPLWWmHaa8p2W5bZd9X5bpGKbr677uUwxAn5ftsRp6khSDtBhqj6FoDA11zjNTd7QnXiyBL+RTQePBKQdQaGfBySROCc6KkDyY/3BO6lStrsQQJcEL1RANZAeobDZfEFIUSlE24t5k2GtliNuI+bB3ISJAC/tnZ/OM/t7cEAXNRh7WpYwxM4URrb8d7BfqeJCDpqTksu2GJOwe/8H/0+JhD3MDgm2cNZ8/Xz2gUWI=', 'eJw1UEFuAzEI/Iq1Zx88G9vgfqWqVmmUW26bVqqq/r0MkINtGGYGzO92HLfH9TyPY3sr2+fP835utRj6fX183R19H62WobXMYcde2WsBLEGzaMAQQ5UMqaUvFkyilAmpF17TSgz2lpmsEAMSSu12JIVGFYTr6CRZMk0h1pcDdckhaLokpnK71rPLmCGhLycE7Fr6ojSPJq8ROAUcAA3hS09p4QC0XAElcAej6OXlgqypvTqzQpEiAF+Xc6dkyVv733wL0WfPCRY3iRWfmPj4+wckilJp']})
+
+X = NamedArray([])
+Y = NamedArray([])
+x = NamedArray([])
+y = NamedArray([])
+
+eqs = equations()
+const = {}
+
+v0 = elements.load_element('eJw1jksOAjEMQ68SdZ1F0+mXqyBUDWh2sysgIcTdseezcv3iOP263h/rPEbv7iLu/nkuw6mAvuf1tWz0GptKqiolqOQCjdCsYgZYYWqjYQqmTDCeEzwK4ha8CjsaTGPUbxHQZPtyzUdBpkGsVibCvscpYUlQf6yybDsV7KQs8cCRx+0smfjZ2+8P0akvyg==', 1)
+X = X.append('v0', v0)
+
+v1 = elements.load_element('eJxFTssOAiEM/JWGcw/gAi3+itmQ1extb6iJMf67HcB4mTbz6PTtar0dW2u1ujO56+u+N8dk7HM7HntnL7EwJWUSz6QnphCCgTcmmyJ/ZplMtGlqUSgdzCMZi8xkTwgW3/MRm4mlG8qkcmJCu5RfB0Bl/BIXeJEMfh5C5ThhkJDWkRb8ltbPFwqAMOM=', 1)
+X = X.append('v1', v1)
+
+v2 = elements.load_element('eJw9UEkOgzAM/ErEOYc4JNj0K1WFaMWNG22lqurfO5OFAyaezOL4OyzLY1+PY1mGixvun+d2DN4Bfa/7ayvoNQfvsnk3Td5JSCgye6cZKBpVfNE7IzaCZSTgIhc6bg16iSiGhmZKaut5zrlaTPinZkNMQmQBc9ZqzBEYyrDTto5DP+rBUrASs5on1RI4ThSerEaTXt4kI0sfDDcJgFplSIxtSj0N5iosdKmZJUMYWMIgtNjXRZH1GcqutK2mv4dh566sZHCVzJHb7w/Km1E9', 2)
+Y = Y.append('v2', v2)
+
+v3 = elements.load_element('eJw9ULsOwjAM/JWoc4a41HHKryBUFdStWwEJIf6dO9dlSOJc7mHn003TfZ23bZq6c+pu78eydTkBfc3rc3H0oiUnbTnVMSfpJacBF9UAZMBWULWakxVesNXGwvhONVZzNQo7HSqBooFjeiipEkYBVVCsxymHFY3JpxVRkz3V4z0oeMAGQBXnSDf4tyF65htIY4kohkvpI+8UFxHdh2Ano8/hG1wt5lTSioaN9wS11l2nPiUojeEtzI5mvXONiTlKtf+n8Nn2Vmp8cpXr9wdBqlIT', 2)
+Y = Y.append('v3', v3)
+
+c0 = elements.load_element('eJw9UEFuAyEM/AraMwd7A9j0K1W0SqrcctsmUlX1751Zwx4wMIxnxvwu2/b1vO37ti0fabn/fD/2JSeg79vz9TjQzyo5Vc+p9ZysYl1ycuyqAIrxAERFQeNNUAxPuq4sgMsgGilQM6j5ZexQalQTCVAVzGYT8YF4myilBR0ug0Oziudap6ni5vNQIGESTt2nGwUKGShmketo7hKBVWv0HVwVqjRyTkj7WdbRTD5j8CNqGQFUOaedvSUyREALR+8x3mFI/pjThwU/v+n17x+EeVNA', 2)
+const['c0'] = c0
+
+c1 = elements.load_element('eJw1UMtuxDAI/BUrZx+MEwzeX1lV0bbaW25pK1XV/vsOjxxIYGYYwP/Lvn8dj/Pc9+VWls+/7+e51AL093H8PB29c6uFtZaBkF4LkdSiAKnhI4gxrQC9qdHjSiAejKQjmS0pMXG3qlNUphnDLFDoim73Azphwz6S0s87FZSM0FLbLsrn2ZLpx2iy5cVlFIRS9LIYaAxx3hRWdgfbCc612FxnFkPCQnv+0cJb2iI2ybV6z3t5zUR9BGDRGM/XI+RgiWPnjHDaNvT3oY/XGxCgUkw=', 2)
+const['c1'] = c1
+
+c2 = elements.load_element('eJw1jjEOwzAIRa+CPHswtsF2r1JFVhply+a0UlX17gXTDAh4/4vPx/W+HesYvbsbuMf73IfzIPS1Hs990ntuHqh64OKhSiFGGUiAwJykqyEIYxEDXa5kZFZTgB6KDmHKbL6qNCnQCLZFIcshjNFgLv/8ZJEkYlEDhushNAdlTWj2nd5iXr4/bMovXQ==', 1)
+const['c2'] = c2
+
+c3 = elements.load_element('eJw1jksOwjAMRK9iZe2F3ebjchWEooK66y6AhBB3Z9ykiyz8PPOcb6j1sa+t1RouFO6f59YCE+h73V/bQa9xYUrGlDNTKUyW+lONWMwYECgIpOxwYlociA+gOikmrDKoHQARFRTdbG6FyObTmvoZVb+FqJX+VFwpcfwE3QxbUY9iY3L24ujJsOV0+/0B0HUvwA==', 1)
+const['c3'] = c3
+
+t = elements.load_element('eJxNVUGOGzEM+0qQcw62Z2zJ/UpRBNtib3vbtkBR9O81KcqZw0wytmRJFEX/vT+fPz7ePj+fz/uX2/37n5/vn/fHba3+fvv49c7Vr70+bt0fN1u/Zo/bXI8Vfa+n1rXp+FPWzoDliQ/8metP49bUMoz7sZ70HGunl7Sr6+UNDut1HuEEk7HOPh0Wp17Y6bLqHYtDfsgSCSEXXztzhsXI7D2+fXmeSLHUnWdTsqe9zukrkk/ly9gDoeoRCbDU2loeVLusfFkNfJQeNaJocx1kIyqyQ8F3CGuBcC1Hnl6Z3Ih84dVZrILQoUUwPEgYBwA4L/HNdGs1BeQX/Jk4GtVNDUMbAQ9OQE6AjKZEuelcpt4DfiTFppYoCxEAXoDCV22Bvwn3qSOIODruyhtGqAln+akmuvBbdjPxY4ctFt0F/pgKyJ5ZFOCJci2CICqvds2O5wwFzwIAOU2IuWXn05FUbZu9u4tNs4EMCIypm559DKqgt6QQCxoybMnqI5oALo7MxlUY8AgsulhaleWZ05UDGqw8VVLNiWhCJVuL2GTOiBbFULU4rcudVGIB9TUvRTyvGlh6gkaW80AuNXFpjxGiwBHcJTKM1iUVLUeYvZovenGOp+h9iOJD/bXMOvjgu+0a6shNhnY5hfxPcQm/If5YErjHQt9Kc0gpUjZY/YjfmJsa/MuWeU59uTQHpIIR8xs5aC0s9pRQRgirn685CzSb1AWTGE3dUIhZyMiz5ZSBESwjMlQLSwj9IiMpAOgiCDnlGv2vAoC5sVEI7EUpIf/kf4hQ127VDp2rhBkLBButj7k4Qxks26whpTRvPtWLSM15zc23eCKdffbUnKBvhEw4k4QAfgs8iVAkWCMJUSUGnvFSP8SnLkIDqL5xzjvSU98B9pTeaSqaCDmypJI97DnSmhEEthSAqfF4LUqmdX0UMc2Syuyrrl8TkLxvU9G6Lpu4iFI8Qi2TArwoj9cdMKXV53zdS54XVdxmVeMzN+EODUJLHcy7J+AR3LAPle8X3ufFo9q+/fsPPXmYHg==', 3)
+const['t'] = t
+
+eq = Equation([c2, c3], [c0, c1], [[elements.ZpElement.zero(), elements.ZpElement.zero()], [elements.ZpElement.zero(), elements.ZpElement.zero()]], t, 3)
+eqs.append(eq)
+p=proof(crs, eqs, X, Y, x, y)
+p.consts=const
+print(p.to_json())

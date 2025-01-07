@@ -59,10 +59,10 @@ class ConstantZpNode(ConstantNode):
 class VariableNode(TypeNode):
     # VTYPE: (ETYPE, VariableArray, CommitmentArray)
     VTYPES = {
-        1: (1, "X", "C"),
-        2: (2, "Y", "D"),
-        -1: (0, "x", "c"),
-        0: (0, "y", "d")
+        1: (1, "X", "c"),
+        2: (2, "Y", "d"),
+        -1: (0, "x", "c_prime"),
+        0: (0, "y", "d_prime")
     }
     def __init__(self, name: str, vtype: int):
         self.name = name
@@ -84,10 +84,9 @@ class VariableNode(TypeNode):
         var_name = self.name
         vtype_tuple = VariableNode.VTYPES[self.vtype]
         raw_element = defs[var_name]
-        
         var_template = f"""
-{var_name} = elements.load_element('{raw_element}', {vtype_tuple[0]})
-{vtype_tuple[2]} = {vtype_tuple[2]}.append('{var_name}', {var_name})
+{var_name} = [elements.load_element('{raw_element[0]}', {vtype_tuple[0]}), elements.load_element('{raw_element[1]}', {vtype_tuple[0]})]
+{vtype_tuple[2]} = {vtype_tuple[2]}.append('{var_name}', {var_name}, True)
 """
         return var_template
 
@@ -136,8 +135,8 @@ class MulPPENode(MulNode):
             if not (isinstance(left, VariableG1Node) and isinstance(right, VariableG2Node)):
                 raise TypeError('Not VV')
             return
-        if not (isinstance(left, VariableG1Node) and isinstance(right, ConstantG2Node)) or \
-        (isinstance(left, ConstantG1Node) and isinstance(right, VariableG2Node)):
+        if not ((isinstance(left, VariableG1Node) and isinstance(right, ConstantG2Node)) or
+                (isinstance(left, ConstantG1Node) and isinstance(right, VariableG2Node))):
             raise TypeError('Neither CV or VC')
 
 
@@ -152,8 +151,8 @@ class MulMS1Node(MulNode):
             if not (isinstance(left, VariableZpNode) and isinstance(right, VariableG1Node)):
                 raise TypeError('Not VV')
             return
-        if not (isinstance(left, VariableZpNode) and isinstance(right, ConstantG1Node)) or \
-        (isinstance(left, ConstantZpNode) and isinstance(right, VariableG1Node)):
+        if not ((isinstance(left, VariableZpNode) and isinstance(right, ConstantG1Node)) or
+                (isinstance(left, ConstantZpNode) and isinstance(right, VariableG1Node))):
             raise TypeError('Neither CV or VC')
 
 
@@ -168,8 +167,8 @@ class MulMS2Node(MulNode):
             if not (isinstance(left, VariableZpNode) and isinstance(right, VariableG2Node)):
                 raise TypeError('Not VV')
             return
-        if not (isinstance(left, VariableZpNode) and isinstance(right, ConstantG2Node)) or \
-        (isinstance(left, ConstantZpNode) and isinstance(right, VariableG2Node)):
+        if not ((isinstance(left, VariableZpNode) and isinstance(right, ConstantG2Node)) or
+                (isinstance(left, ConstantZpNode) and isinstance(right, VariableG2Node))):
             raise TypeError('Neither CV or VC')
 
 
@@ -184,8 +183,8 @@ class MulQENode(MulNode):
             if not (isinstance(left, VariableZpNode) and isinstance(right, VariableG1Node)):
                 raise TypeError('Not VV')
             return
-        if not (isinstance(left, VariableZpNode) and isinstance(right, ConstantZpNode)) or \
-        (isinstance(left, ConstantZpNode) and isinstance(right, VariableZpNode)):
+        if not ((isinstance(left, VariableZpNode) and isinstance(right, ConstantZpNode)) or
+                (isinstance(left, ConstantZpNode) and isinstance(right, VariableZpNode))):
             raise TypeError('Neither CV or VC')
 
 # ------ Equations ------
@@ -225,7 +224,10 @@ class PPEquationNode(EquationNode):
         for i,xvar in enumerate(X):
             for j,yvar in enumerate(Y):
                 eq_mul = next((eq_mul for eq_mul in self if eq_mul.left == xvar.name and eq_mul.right == yvar.name), None)
-                g[i][j] = eq_mul.gamma if eq_mul.gamma else "elements.ZpElement.zero()"
+                if eq_mul:
+                    g[i][j] = eq_mul.gamma if eq_mul.gamma else "elements.ZpElement.zero()"
+                else:
+                    g[i][j] = "elements.ZpElement.zero()"
         self.a = A
         self.b = B
         self.g = g
@@ -233,7 +235,14 @@ class PPEquationNode(EquationNode):
             
     def compile_proof(self, defs, target):
         eq_template = f"""
-eq = Equation([{', '.join(self.a)}], [{', '.join(self.b)}], [{'], ['.join(['[' + ', '.join(row) + ']' for row in self.g])}], {self.target}, 3)
+eq = Equation([{', '.join(self.a)}], [{', '.join(self.b)}], [{', '.join(['[' + ', '.join(row) + ']' for row in self.g])}], {self.target}, 3)
+eqs.append(eq)
+"""
+        return eq_template
+        
+    def compile_verify(self, defs, target):
+        eq_template = f"""
+eq = Equation([{', '.join(self.a)}], [{', '.join(self.b)}], [{', '.join(['[' + ', '.join(row) + ']' for row in self.g])}], {self.target}, 3)
 eqs.append(eq)
 """
         return eq_template
@@ -265,18 +274,16 @@ class QEquationNode(EquationNode):
         for i,var in enumerate(x):
             # find the eq_mul that has var as left
             eq_mul = next((eq_mul for eq_mul in self if eq_mul.left == var.name), None)
-            if eq_mul:
-                B[i] = eq_mul.right
+            B[i] = eq_mul.right if eq_mul else "elements.ZpElement.zero()"
         for j,var in enumerate(y):
             # find the eq_mul that has var as right
             eq_mul = next((eq_mul for eq_mul in self if eq_mul.right == var.name), None)
-            if eq_mul:
-                A[j] = consts_dict[eq_mul.left]
+            A[j] = eq_mul.left if eq_mul else "elements.ZpElement.zero()"
         for i,xvar in enumerate(x):
             for j,yvar in enumerate(y):
                 eq_mul = next((eq_mul for eq_mul in self if eq_mul.left == xvar.name and eq_mul.right == yvar.name), None)
                 if eq_mul:
-                    g[i][j] = consts_dict[eq_mul.gamma]
+                    g[i][j] = eq_mul.gamma if eq_mul.gamma else "elements.ZpElement.zero()"
         self.a = A
         self.b = B
         self.g = g
@@ -409,33 +416,78 @@ const = {{}}
         for eq in self.eqs:
             script += eq.compile_proof(defs, target)
             
-        script += "p=proof(crs, eqs, X, Y, x, y)\n"
+        script += "p=proof(crs, eqs, X, Y, x, y)\np.consts=const\nprint(p.to_json())\n"
         return script
 
 
 
     def compile_verify(self, defs, crs_filename, target):
-        prelude = f"""from framework import load_element, CRS, Equation, equations, Proof, proof
+        prelude = f"""from framework import CRS, Equation, equations, verify
+from utils import NamedArray, UnamedArray
+import numpy as np
+import {target} as elements
 
-crs = CRS({crs_filename})
+crs = CRS.from_json({crs_filename})
 
-c = []
-d = []
-c_prime = []
-d_prime = []
+c = NamedArray([])
+d = NamedArray([])
+c_prime = NamedArray([])
+d_prime = NamedArray([])
+
 
 eqs = equations()
 const = {{}}
 """
+
+        
         script = prelude
-        for var in self.vars:
+        #for var in self.vars:
+        #    script += var.compile_verify(defs, target)
+        for var in self.X:
+            script += var.compile_verify(defs, target)
+        for var in self.Y:
+            script += var.compile_verify(defs, target)
+        for var in self.x:
+            script += var.compile_verify(defs, target)
+        for var in self.y:
             script += var.compile_verify(defs, target)
         for const in self.consts:
             script += const.compile_verify(defs, target)
+            
+        script += "pis = [\n"
+        for pi in defs['pis']:
+            script += "    UnamedArray([\n"
+            for b in pi:
+                if isinstance(b, str):
+                    script += f"            elements.load_element('{b}', 1),\n"
+                else:
+                    script += "        [\n"
+                    for e in b:
+                        script += f"            elements.load_element('{e}', 2),\n"
+                    script += "        ],\n"
+            script += f"    ]),\n"
+        script += "]\n"
+            
+        script += "thetas = [\n"
+        for pi in defs['thetas']:
+            script += "    UnamedArray([\n"
+            for b in pi:
+                if isinstance(b, str):
+                    script += f"        elements.load_element('{b}', 1),\n"
+                else:
+                    script += "        [\n"
+                    for e in b:
+                        script += f"            elements.load_element('{e}', 1),\n"
+                    script += "        ],\n"
+            script += f"    ]),\n"
+        script += "]\n"
+        
+        
+            
         for eq in self.eqs:
             script += eq.compile_verify(defs, target)
             
-        script += "v=verify(crs, eqs, c, d, c_prime, d_prime, pis, thetas)\n"
+        script += "v=verify(crs, eqs, c, c_prime, d, d_prime, pis, thetas)\nprint(v)\n"
         return script
 
 

@@ -12,25 +12,6 @@ from utils import NamedArray, UnamedArray, random_zp
 import json
 
 
-
-def load_crs(filename, new=None):
-    try:
-        with open(filename, 'r') as f:
-            crs = CRS.from_json(json.load(f))
-    except FileNotFoundError:
-        if new == 'sound':
-            crs = CRS.new_sound()
-        elif new == 'wi':
-            crs = CRS.new_wi()
-        else:
-            raise Exception('CRS not valid')
-    return crs
-
-
-
-
-
-
 class Equation():
     def __init__(self, a, b, Gamma, t, etype):
         self.a = a
@@ -128,6 +109,14 @@ class CRS():
     @property
     def v2(self):
         return UnamedArray([self._v2])
+    
+    def to_json(self):
+        return json.dumps({
+            'u1': [u.__json__() for u in self._u1],
+            'u2': [u.__json__() for u in self._u2],
+            'v1': [v.__json__() for v in self._v1],
+            'v2': [v.__json__() for v in self._v2],
+        })
 
     @staticmethod
     def from_json(json_string):
@@ -179,13 +168,14 @@ class CRS():
         
 
 class Proof():
-    def __init__(self, c, c_prime, d, d_prime, pis, thetas):
+    def __init__(self, c, c_prime, d, d_prime, pis, thetas, consts):
         self.c = c
         self.c_prime = c_prime
         self.d = d
         self.d_prime = d_prime
         self.pis = pis
         self.thetas = thetas
+        self.consts = consts
 
     def to_json(self):
         def to_json_array(array):
@@ -196,8 +186,9 @@ class Proof():
             **self.c_prime.__json__(),
             **self.d.__json__(),
             **self.d_prime.__json__(),
+            **self.consts,
             'pis': self.pis,
-            'thetas': self.thetas
+            'thetas': self.thetas,
         }, cls=NamedArray.NamedArrayEncoder)
         
     @classmethod
@@ -208,7 +199,7 @@ class Proof():
         d = NamedArray([(com['name'], [Element.from_json(com['value'][0]), Element.from_json(com['value'][1])]) for com in data['d']])
         d_prime = NamedArray([(com['name'], [Element.from_json(com['value'][0]), Element.from_json(com['value'][1])]) for com in data['d_prime']])
 
-        breakpoint()
+
         pis = [np.array([[Element.from_json(e) for e in b] for b in pi]) for pi in data['pis']]
         thetas = [np.array([[Element.from_json(e) for e in b] for b in theta]) for theta in data['thetas']]
 
@@ -225,7 +216,6 @@ def proof(crs: CRS, eqs: equations, X, Y, x, y):
     R = np.array([[ZpElement.random() for _ in range(2)] for _ in range(m)]) # shape (m, 2) of Zp
     r = np.array([ZpElement.random() for _ in range(m_prime)]) # shape (m,) of Zp
     
-    #breakpoint()
     c = X.iota_1(crs) + R@crs.u if len(X) > 0 else NamedArray([])
 
     c_prime = x.iota_prime_1(crs) + r@crs.u1 if len(x) > 0 else NamedArray([])
@@ -316,7 +306,7 @@ def proof(crs: CRS, eqs: equations, X, Y, x, y):
         pis.append(UnamedArray(pi))
         thetas.append(UnamedArray(theta))
         
-    return Proof(c, c_prime, d, d_prime, pis, thetas)
+    return Proof(c, c_prime, d, d_prime, pis, thetas, None)
     
 
 
@@ -330,9 +320,7 @@ def verify(crs: CRS, eqs: equations, c, c_prime, d, d_prime, pis, thetas):
         
         if eq.etype == 3:
             lhs = (a.iota_1(crs)).b_pair(d) * c.b_pair(b.iota_2(crs)) * c.b_pair(Gamma @ d)
-            breakpoint()
             rhs = crs.iota_t(t) * crs.u.b_pair(pi) * theta.b_pair(crs.v)
-            breakpoint()
             if not np.all(lhs == rhs): return False
         
         elif eq.etype == 1:
@@ -344,7 +332,6 @@ def verify(crs: CRS, eqs: equations, c, c_prime, d, d_prime, pis, thetas):
             rhs = crs.iota_t_hat(t) * crs.u[0].b_pair(pi) * theta.b_pair(crs.v)
             if not np.all(lhs == rhs): return False
         elif eq.etype == 0:
-            breakpoint()
             lhs = (a.iota_prime_1(crs)).b_pair(d_prime) * c_prime.b_pair(b.iota_prime_2(crs)) * c_prime.b_pair(Gamma @ d_prime)
             rhs = crs.iota_t_prime(t) * crs.u[0].b_pair(pi) * theta.b_pair(crs.v[0])
             if not np.all(lhs == rhs): return False

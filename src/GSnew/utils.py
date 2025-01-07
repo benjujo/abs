@@ -216,17 +216,25 @@ class NamedArray(np.ndarray):
         # Create a list of dicts with 'name' and 'value'
         return {name: value for name, value in zip(self.names, self.tolist())}
     
-    def append(self, name, value):
+    def append(self, name, value, is_b=False):
         """Appends a new element with a given name and value."""
         # Add the new name
         self.names.append(name)
         # Create a new array with the appended value
-        new_array = np.append(self, value)
+        if is_b:
+            # Handle empty NamedArray case
+            if self.size == 0:
+                new_array = np.array([value], ndmin=2)
+            else:
+                new_array = np.vstack([self, np.array(value, ndmin=2)])
+        else:
+            new_array = np.append(self, value)
         # View the new array as a NamedArray and update the names
+        #if is_b:
+        #    return NamedArray([(n, v) for n, v in zip(self.names, [new_array])])
         return NamedArray([(n, v) for n, v in zip(self.names, new_array)])
     
     def b_pair(self, other):
-        print(self.shape, other.shape)
         if self.shape[0] != other.shape[0]:
             raise ValueError("Shapes are not aligned for matrix operation")
         if self.size == 0 or other.size == 0:
@@ -266,7 +274,6 @@ class UnamedArray(np.ndarray):
         super().__setitem__(key, value)
             
     def iota_1(self, crs):
-        breakpoint()
         return UnamedArray([crs.iota_1(element) for element in self])
             
     def iota_prime_1(self, crs):
